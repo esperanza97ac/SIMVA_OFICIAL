@@ -1,0 +1,6 @@
+{
+  "name": "Asistente de Mantenimiento Automotriz",
+  "description": "Busca y gestiona el plan de mantenimiento de tu coche por kilometraje y meses con alertas automáticas de vencimiento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

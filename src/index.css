@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Asphalt gray and deep dark palette */
+  --color-primary-50: #f8fafc;
+  --color-primary-100: #f1f5f9;
+  --color-primary-200: #e2e8f0;
+  --color-primary-300: #cbd5e1;
+  --color-primary-400: #94a3b8;
+  --color-primary-500: #64748b;
+  --color-primary-600: #4b5563;
+  --color-primary-700: #374151;
+  --color-primary-800: #27303f;
+  --color-primary-900: #1c212c;
+  --color-primary-950: #12161e;
+
+  /* Neon Blue / Cyan accents from SIMVA mockup */
+  --color-primary-fixed-dim: #00dddd;
+  --color-accent-gold: #00dddd;
+  --color-accent-gold-dark: #00b3b3;
+  --color-on-surface-variant: #b9cac9;
+  --color-outline-variant: #3a4a49;
+
+  /* High performance vibrant neons */
+  --color-neon-green: #10b981;
+  --color-neon-amber: #f59e0b;
+  --color-neon-red: #ef4444;
+}
+
+/* Elegant slate-dark background centered on the SIMVA style */
+body {
+  font-family: var(--font-sans);
+  background-color: #1f232d;
+  color: #e5e2e1;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar stylings tuned for asphalt dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0e0e0e;
+}
+::-webkit-scrollbar-thumb {
+  background: #201f1f;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}
+
+/* Glassmorphic cards from mockup */
+.glass-card {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Asphalt panel (glassmorphism with Neon Blue borders) */
+.garage-panel {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 221, 221, 0.25);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.panel-neon-green {
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+}
+
+.panel-neon-amber {
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+}
+
+.panel-neon-red {
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.15);
+}
+
+.glow-btn:hover {
+  box-shadow: 0 0 15px rgba(0, 221, 221, 0.5);
+}
+
+/* Neon indicators */
+.neon-glow-green {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+.neon-glow-amber {
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+}
+.neon-glow-red {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+}
+
+.neon-glow-blue {
+  box-shadow: 0 0 15px rgba(0, 221, 221, 0.3);
+}
+.neon-glow-blue:focus-within {
+  box-shadow: 0 0 20px rgba(0, 221, 221, 0.5);
+  border-color: #00dddd;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.4; }
+}
+
+.neon-pulse {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
