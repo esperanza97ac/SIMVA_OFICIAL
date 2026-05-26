@@ -1,4 +1,6 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { 
   Search, 
   MapPin, 
@@ -29,6 +31,22 @@ interface Workshop {
   };
 }
 
+// Haversine distance formula to calculate absolute spacing in meters
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // Earth's radius in meters
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // distance in meters
+};
+
 interface TalleresProps {
   currentUserEmail?: string | null;
 }
@@ -43,23 +61,127 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [lastSearchedKeyword, setLastSearchedKeyword] = useState("Centro de Madrid");
   const [searchRadius, setSearchRadius] = useState<number>(5000);
+  const [isMapDisplaced, setIsMapDisplaced] = useState(false);
 
-  // Haversine distance formula to calculate absolute spacing in meters
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371e3; // Earth's radius in meters
-    const phi1 = (lat1 * Math.PI) / 180;
-    const phi2 = (lat2 * Math.PI) / 180;
-    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
-    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersGroupRef = useRef<L.LayerGroup | null>(null);
+  const searchedCoordsRef = useRef({ lat: 40.416775, lng: -3.703790 });
 
-    const a =
-      Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-      Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  // Initialize interactive Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
 
-    return R * c; // distance in meters
-  };
+    if (!mapRef.current) {
+      const initialLat = latitude || 40.416775;
+      const initialLon = longitude || -3.703790;
+      
+      const map = L.map(mapContainerRef.current, {
+        center: [initialLat, initialLon],
+        zoom: 13,
+        scrollWheelZoom: false,
+      });
 
+      // Dark Mode tile layer - CartoDB Dark Matter
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
+      }).addTo(map);
+
+      const markersGroup = L.layerGroup().addTo(map);
+
+      mapRef.current = map;
+      markersGroupRef.current = markersGroup;
+
+      // Track movement to show "Re-centrar" button if map center moves away
+      map.on("move", () => {
+        const currentCenter = map.getCenter();
+        const dist = calculateDistance(
+          currentCenter.lat,
+          currentCenter.lng,
+          searchedCoordsRef.current.lat,
+          searchedCoordsRef.current.lng
+        );
+        setIsMapDisplaced(dist > 50); // displaced more than 50 meters
+      });
+    }
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        markersGroupRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update center and markers dynamically
+  useEffect(() => {
+    if (!mapRef.current || !markersGroupRef.current) return;
+    const lat = latitude || 40.416775;
+    const lon = longitude || -3.703790;
+
+    searchedCoordsRef.current = { lat, lng: lon };
+    setIsMapDisplaced(false);
+
+    mapRef.current.setView([lat, lon], 13);
+    markersGroupRef.current.clearLayers();
+
+    // Add search center marker with high-contrast pulsing cyan color
+    const searchCenterIcon = L.divIcon({
+      html: `
+        <div class="relative flex items-center justify-center">
+          <div class="absolute w-10 h-10 bg-[#2ac1ff]/30 rounded-full animate-ping pointer-events-none"></div>
+          <div class="w-6 h-6 bg-[#2ac1ff] border border-slate-900 rounded-full flex items-center justify-center shadow-[0_0_15px_#2ac1ff]">
+            <span class="w-1.5 h-1.5 bg-slate-900 rounded-full"></span>
+          </div>
+        </div>
+      `,
+      className: "custom-div-icon-center",
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
+    });
+
+    L.marker([lat, lon], { icon: searchCenterIcon })
+      .bindPopup(`<div class="text-xs text-slate-800 font-sans p-1"><b>Dirección buscada</b><br/>${lastSearchedKeyword || "Coordenadas calibradas"}</div>`)
+      .addTo(markersGroupRef.current);
+
+    // Add workshop markers using mint-green styling matching Simva UI
+    workshops.forEach((shop, idx) => {
+      const shopIcon = L.divIcon({
+        html: `
+          <div class="w-5 h-5 bg-[#54ffb5] border border-slate-900 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(84,255,181,0.8)] cursor-pointer hover:scale-125 transition-all">
+            <span class="w-1.5 h-1.5 bg-slate-900 rounded-full"></span>
+          </div>
+        `,
+        className: "custom-div-icon-shop",
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+
+      const title = shop.tags?.name || `Taller Automotriz #${idx + 1}`;
+      const street = shop.tags?.["addr:street"] || "Dirección en mapa";
+      const num = shop.tags?.["addr:housenumber"] || "";
+      const phone = shop.tags?.phone || shop.tags?.["contact:phone"] || "";
+
+      const popupHtml = `
+        <div class="text-xs font-sans text-slate-900 max-w-[200px] p-2">
+          <h4 class="font-extrabold border-b pb-1 mb-1 text-emerald-600 uppercase flex items-center gap-1">🔧 ${title}</h4>
+          <p class="text-[11px] text-slate-700 leading-snug">${street} ${num}</p>
+          ${phone ? `<p class="text-[10px] text-cyan-600 font-semibold mt-1">📞 ${phone}</p>` : ""}
+          <a href="https://www.google.com/maps/search/?api=1&query=${shop.lat},${shop.lon}" target="_blank" rel="noopener noreferrer" class="block text-center mt-2.5 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 text-black font-extrabold text-[10px] py-1.5 px-3 rounded uppercase tracking-wider scale-95 hover:scale-100 transition-all" style="text-decoration:none;">Cómo llegar</a>
+        </div>
+      `;
+
+      L.marker([shop.lat, shop.lon], { icon: shopIcon })
+        .bindPopup(popupHtml)
+        .addTo(markersGroupRef.current);
+    });
+  }, [latitude, longitude, workshops, lastSearchedKeyword]);
+
+  // Remove the inline calculateDistance from inside the component, since we moved it outside.
+  
   const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
     const overpassUrl = "https://overpass-api.de/api/interpreter";
     
@@ -199,12 +321,11 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     );
   };
 
-  const handleQuickLoc = (cityName: string, lat: number, lon: number) => {
-    setLatitude(lat);
-    setLongitude(lon);
-    setAddress("");
-    setLastSearchedKeyword(cityName);
-    fetchWorkshopsOverpass(lat, lon);
+  const handleRecenter = () => {
+    if (mapRef.current && latitude && longitude) {
+      mapRef.current.setView([latitude, longitude], 13);
+      setIsMapDisplaced(false);
+    }
   };
 
   // Trigger initial search to display something beautiful immediately
@@ -222,7 +343,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
           <span>Talleres de Confianza</span>
         </h2>
         <p className="text-xs text-on-surface-variant font-medium mt-1 uppercase tracking-wider font-mono">
-          BÚSQUEDA GEOLOCALIZADA EN TIEMPO REAL · RADIO RECURSIVO ({searchRadius / 1000} KM)
+          HAZ QUE TU VEHÍCULO VUELVA A RUGIR
         </p>
       </header>
 
@@ -230,7 +351,6 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
       <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4 shadow-xl">
         <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
           <span className="font-mono text-[9px] font-extrabold text-[#2ac1ff] uppercase tracking-widest">
-            CALIBRADOR DE COORDENADAS DENTRO DEL SECTOR
           </span>
           <p className="text-xs text-on-surface-variant">
             Introduce tu dirección, código postal o calle para explorar proveedores mecánicos autónomos registrados de la red de carreteras de inmediato.
@@ -277,34 +397,12 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
             </button>
           </div>
         </form>
-
-        {/* Shortcuts tag lists */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 text-[10px] font-mono">
-          <span className="text-on-surface-variant uppercase font-bold tracking-wider">Accesos rápidos:</span>
-          {[
-            { name: "Madrid", lat: 40.416775, lon: -3.703790 },
-            { name: "Barcelona", lat: 41.385064, lon: 2.173403 },
-            { name: "Valencia", lat: 39.469907, lon: -0.376288 },
-            { name: "Sevilla", lat: 37.389092, lon: -5.984459 },
-            { name: "Zaragoza", lat: 41.648823, lon: -0.889085 }
-          ].map((city) => (
-            <button
-              key={city.name}
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleQuickLoc(city.name, city.lat, city.lon)}
-              className="px-2.5 py-1 bg-white/5 hover:bg-[#2ac1ff]/10 border border-white/5 hover:border-[#2ac1ff]/20 text-on-surface-variant hover:text-white rounded-md transition-all cursor-pointer uppercase"
-            >
-              {city.name}
-            </button>
-          ))}
-        </div>
       </section>
 
       {/* Grid Status Feed */}
       {statusText && (
-        <div className="flex items-center gap-2 rounded-xl bg-orange-500/10 border border-orange-500/20 px-4 py-2.5 text-[10px] text-orange-400 font-mono">
-          <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-ping" />
+        <div className="flex items-center gap-2 rounded-xl bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 px-4 py-2.5 text-[10px] text-[#2ac1ff] font-mono shadow-[0_0_15px_rgba(42,193,255,0.05)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#2ac1ff] animate-ping" />
           <span className="uppercase">{statusText}</span>
         </div>
       )}
@@ -317,21 +415,49 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
         </div>
       )}
 
-      {/* Map Satellite Coordinates Radar bar */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="glass-card p-3 rounded-xl border border-white/5 bg-[#11141a]/40 flex flex-col gap-0.5 text-left">
-          <span className="font-mono text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">NUDO DE LATITUD</span>
-          <span className="font-mono text-xs font-bold text-[#54ffb5]">
-            {latitude ? latitude.toFixed(6) : "Pendiente"}
+      {/* Interactive Map Section */}
+      <section 
+        className="glass-card p-2.5 rounded-2xl border border-white/10 shadow-xl overflow-hidden"
+        aria-label="Mapa interactivo de talleres mecánicos"
+      >
+        <div className="flex items-center gap-2 mb-2 px-1.5 pt-1">
+          <MapPin className="h-4 w-4 text-[#2ac1ff]" />
+          <span className="font-mono text-[9px] font-extrabold text-[#2ac1ff] uppercase tracking-wider">
+            SITUACIÓN GEOGRÁFICA DE LOS TALLERES
           </span>
         </div>
-        <div className="glass-card p-3 rounded-xl border border-white/5 bg-[#11141a]/40 flex flex-col gap-0.5 text-left">
-          <span className="font-mono text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">NUDO DE LONGITUD</span>
-          <span className="font-mono text-xs font-bold text-[#54ffb5]">
-            {longitude ? longitude.toFixed(6) : "Pendiente"}
+        
+        <div id="map-container-id" className="relative rounded-xl overflow-hidden border border-white/5 z-10 w-full h-[320px]">
+          <div 
+            ref={mapContainerRef} 
+            className="w-full h-full"
+            role="region"
+            aria-label="Mapa interactivo que muestra marcadores de talleres"
+          />
+
+          {isMapDisplaced && (
+            <button
+              onClick={handleRecenter}
+              aria-label="Re-centrar el mapa en tu ubicación buscada"
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-[#11141a]/95 border border-[#2ac1ff]/40 hover:border-[#2ac1ff] focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none text-[#2ac1ff] font-mono text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.6),0_0_12px_rgba(42,193,255,0.25)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Navigation className="h-3 w-3 rotate-45 text-[#2ac1ff] animate-pulse" />
+              <span>Re-centrar</span>
+            </button>
+          )}
+        </div>
+        
+        <div className="flex justify-between items-center mt-2 px-1.5 pb-1 text-[9px] font-mono text-on-surface-variant uppercase">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#2ac1ff] inline-block shadow-[0_0_5px_#2ac1ff]" />
+            Tu ubicación calibrada
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#54ffb5] inline-block shadow-[0_0_5px_#54ffb5]" />
+            Talleres registrados
           </span>
         </div>
-      </div>
+      </section>
 
       {/* Display Results */}
       <div className="space-y-4">

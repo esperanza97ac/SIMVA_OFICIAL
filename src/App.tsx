@@ -9,8 +9,9 @@ import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
-import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart } from "lucide-react";
 import Talleres from "./components/Talleres";
+import MisDocumentos from "./components/MisDocumentos";
 
 // Firebase integration
 import { auth, db, handleFirestoreError, OperationType } from "./firebase";
@@ -74,6 +75,110 @@ export function calculateVehicleLifeline(
   return Math.round(minPercentage);
 }
 
+function SVGTachometer({ isMoto }: { isMoto: boolean }) {
+  const maxVal = isMoto ? 14 : 8;
+  const redlineRange = isMoto ? 11 : 6;
+  const currentRPM = isMoto ? 11.2 : 5.8; // High scale visualization targets for each mode
+  
+  // Needle orientation angle (-140deg to 140deg scale)
+  const angle = -140 + (currentRPM / maxVal) * 280;
+
+  return (
+    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-28 h-28 opacity-20 pointer-events-none overflow-visible select-none transition-all duration-300 group-hover:opacity-35">
+      <svg viewBox="0 0 100 100" className="w-full h-full text-white overflow-visible">
+        {/* RPM Arch background grid */}
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+        
+        {/* High performance redline zone highlight arc */}
+        {isMoto ? (
+          <path
+            d="M 76.8 76.8 A 38 38 0 0 1 50 88"
+            fill="none"
+            stroke="rgb(239, 68, 68)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            className="opacity-60"
+          />
+        ) : (
+          <path
+            d="M 85.2 62.1 A 38 38 0 0 1 50 88"
+            fill="none"
+            stroke="rgb(239, 68, 68)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            className="opacity-60"
+          />
+        )}
+
+        {/* Dynamic scale tick markers */}
+        {Array.from({ length: maxVal + 1 }).map((_, i) => {
+          const tickAngle = -140 + (i / maxVal) * 280;
+          const rad = (tickAngle * Math.PI) / 180;
+          const x1 = 50 + 35 * Math.cos(rad);
+          const y1 = 50 + 35 * Math.sin(rad);
+          const x2 = 50 + 41 * Math.cos(rad);
+          const y2 = 50 + 41 * Math.sin(rad);
+          const isRed = i >= redlineRange;
+
+          return (
+            <g key={i}>
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={isRed ? "#ef4444" : "rgba(255,255,255,0.4)"}
+                strokeWidth={isRed ? "2" : "1"}
+              />
+              {i % 2 === 0 && (
+                <text
+                  x={50 + 26 * Math.cos(rad)}
+                  y={50 + 26 * Math.sin(rad) + 2}
+                  fontSize="7.5"
+                  textAnchor="middle"
+                  fill={isRed ? "#ff8888" : "rgba(255,255,255,0.45)"}
+                  className="font-mono font-bold select-none"
+                >
+                  {i}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Dynamic Center Needle Pivot */}
+        <circle cx="50" cy="50" r="4.5" fill="#1e232d" stroke="#2ac1ff" strokeWidth="1.5" />
+
+        {/* Needle hand with drop glow indicator */}
+        <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: "50px 50px" }}>
+          <line
+            x1="50"
+            y1="50"
+            x2="50"
+            y2="16"
+            stroke="#2ac1ff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            className="drop-shadow-[0_0_4px_#2ac1ff]"
+          />
+          <polygon
+            points="48.5,50 51.5,50 50,14"
+            fill="#2ac1ff"
+          />
+        </g>
+
+        {/* Tachometer legend metrics */}
+        <text x="50" y="65" fontSize="6.5" textAnchor="middle" fill="rgba(255,255,255,0.25)" className="font-mono uppercase tracking-widest font-extrabold">
+          RPM x1000
+        </text>
+        <text x="50" y="73.5" fontSize="7.5" textAnchor="middle" fill={isMoto ? "#ef4444" : "#2ac1ff"} className="font-mono font-black tracking-wider uppercase">
+          {isMoto ? "MOTO 14K" : "CAR 8K"}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 export default function App() {
   const [carProfile, setCarProfile] = useState<CarProfile | null>(null);
   const [vehicles, setVehicles] = useState<CarProfile[]>([]);
@@ -90,8 +195,27 @@ export default function App() {
   const [authChecking, setAuthChecking] = useState(true);
 
   // Selected visual view screen (registrar, garaje or perfil)
-  const [activeScreen, setActiveScreen] = useState<"registrar" | "garaje" | "perfil" | "talleres">("registrar");
+  const [activeScreen, setActiveScreen] = useState<"garaje" | "talleres" | "documentos" | "perfil">("garaje");
   const [selectedDetailVehicleId, setSelectedDetailVehicleId] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Embedded Settings Preferences (from deleted Ajustes screen)
+  const [warnDistance, setWarnDistance] = useState<number>(() => {
+    const saved = localStorage.getItem("simva_warn_distance");
+    return saved ? Number(saved) : 1000;
+  });
+  const [dangerDistance, setDangerDistance] = useState<number>(() => {
+    const saved = localStorage.getItem("simva_danger_distance");
+    return saved ? Number(saved) : 500;
+  });
+  const [notiPush, setNotiPush] = useState<boolean>(() => {
+    const saved = localStorage.getItem("simva_noti_push");
+    return saved !== "false";
+  });
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem("simva_sound_enabled");
+    return saved === "true";
+  });
 
   // Helper function to sync Tasks to Cloud
   const saveTasksToFirestore = async (uid: string, vehicleId: string, tasksList: MaintenanceTask[]) => {
@@ -294,8 +418,10 @@ export default function App() {
 
           if (fetchedVehicles.length > 0) {
             setActiveScreen("garaje");
+            setIsRegistering(false);
           } else {
-            setActiveScreen("registrar");
+            setActiveScreen("garaje");
+            setIsRegistering(true);
           }
         } catch (err: any) {
           console.error("Error loading profile from Firestore:", err);
@@ -353,11 +479,11 @@ export default function App() {
       const lastDoneKm = track?.lastCompletedKm !== undefined ? track.lastCompletedKm : 0;
       const kmRemaining = (lastDoneKm + t.cada_km) - veh.currentKm;
 
-      // Match the exact thresholds: rojo < 500, ambar >= 500 && <= 1000
+      // Match the exact thresholds
       let currentStatus: "ok" | "warning" | "danger" = "ok";
-      if (kmRemaining < 500) {
+      if (kmRemaining < dangerDistance) {
         currentStatus = "danger";
-      } else if (kmRemaining <= 1000) {
+      } else if (kmRemaining <= warnDistance) {
         currentStatus = "warning";
       }
 
@@ -517,6 +643,7 @@ export default function App() {
 
         // Navigate automatically to Pantalla B: Garaje / Estado
         setActiveScreen("garaje");
+        setIsRegistering(false);
       } catch (err: any) {
         console.error("Error fetching recommended maintenance schedule:", err);
         setError("Fallo de red al consultar con el servidor. Se emplearán datos recomendados estándar.");
@@ -560,6 +687,7 @@ export default function App() {
         }
 
         setActiveScreen("garaje");
+        setIsRegistering(false);
       } finally {
         setIsLoading(false);
       }
@@ -687,7 +815,8 @@ export default function App() {
       setTracking([]);
       setError(null);
       setInfoMessage(null);
-      setActiveScreen("registrar");
+      setActiveScreen("garaje");
+      setIsRegistering(true);
       
       localStorage.removeItem("automoto_profile");
       localStorage.removeItem("automoto_tasks");
@@ -760,7 +889,8 @@ export default function App() {
       setInfoMessage("Tu cuenta y todos tus datos han sido eliminados de forma permanente.");
       setTimeout(() => {
         setInfoMessage(null);
-        setActiveScreen("registrar");
+        setActiveScreen("garaje");
+        setIsRegistering(true);
       }, 3500);
 
     } catch (err: any) {
@@ -823,6 +953,90 @@ export default function App() {
     await handleUpdateOdometerVal(Number(newOdo), carProfile);
   };
 
+  const getNotifications = (): any[] => {
+    if (!notiPush) return [];
+    const list: any[] = [];
+    vehicles.forEach((veh) => {
+      // Find tasks list for this vehicle
+      const vehTasks = vehiclesTasksMap[veh.id!] || getIndustryFallbackPlan(veh.fuelType, veh.vehicleType) || [];
+      const vehTracking = vehiclesTrackingMap[veh.id!] || [];
+      
+      vehTasks.forEach((task) => {
+        const track = vehTracking.find((tr) => tr.id === task.id);
+        const odometro = veh.currentKm;
+        const lastDoneKm = track?.lastCompletedKm !== undefined ? track.lastCompletedKm : 0;
+        
+        // Solve for remaining parameters
+        let kmRemaining = Infinity;
+        if (task.cada_km > 0) {
+          let nextDueKm = 0;
+          if (track && track.lastCompletedKm !== undefined) {
+            nextDueKm = track.lastCompletedKm + task.cada_km;
+          } else {
+            nextDueKm = Math.ceil((odometro + 1) / task.cada_km) * task.cada_km;
+          }
+          kmRemaining = nextDueKm - odometro;
+        }
+
+        let monthsRemaining = Infinity;
+        if (task.cada_meses > 0) {
+          if (track && track.lastCompletedDate) {
+            const lastDate = new Date(track.lastCompletedDate);
+            const today = new Date();
+            const diffYears = today.getFullYear() - lastDate.getFullYear();
+            const diffMonths = today.getMonth() - lastDate.getMonth();
+            const elapsedMonths = diffYears * 12 + diffMonths;
+            monthsRemaining = Math.max(0, task.cada_meses - elapsedMonths);
+          } else {
+            if (kmRemaining !== Infinity) {
+              const monthlyUsage = veh.monthlyKm > 0 ? veh.monthlyKm : 1000;
+              monthsRemaining = kmRemaining / monthlyUsage;
+            } else {
+              monthsRemaining = task.cada_meses;
+            }
+          }
+        }
+        const roundedMonthsRemaining = Math.max(0, Math.round(monthsRemaining));
+
+        let statusColor: "danger" | "warning" | "ok" = "ok";
+        if (task.cada_km > 0) {
+          if (kmRemaining < dangerDistance) {
+            statusColor = "danger";
+          } else if (kmRemaining <= warnDistance) {
+            statusColor = "warning";
+          }
+        } else {
+          if (roundedMonthsRemaining <= 1) {
+            statusColor = "danger";
+          } else if (roundedMonthsRemaining <= 2) {
+            statusColor = "warning";
+          }
+        }
+
+        if (statusColor === "danger") {
+          list.push({
+            id: `${veh.id}-${task.id}-danger`,
+            type: "danger",
+            message: `⚠️ Aviso de SIMVA: Tu coche te pide una revisión de ${task.tarea.toLowerCase()} cuanto antes`,
+            vehicleName: veh.makeModel,
+            taskName: task.tarea,
+            timestampText: "Hace 2 días" // 1 vez cada 3 días
+          });
+        } else if (statusColor === "warning") {
+          list.push({
+            id: `${veh.id}-${task.id}-warning`,
+            type: "warning",
+            message: `SIMVA detectó una anomalía leve. Echa un vistazo a ${task.tarea.toLowerCase()} antes de tu próximo viaje largo.`,
+            vehicleName: veh.makeModel,
+            taskName: task.tarea,
+            timestampText: "Hace 6 días" // 1 vez cada semana
+          });
+        }
+      });
+    });
+    return list;
+  };
+
   if (authChecking) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-white p-6">
@@ -839,7 +1053,7 @@ export default function App() {
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-28 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
-      <Header hasCar={!!carProfile} carName={carProfile?.makeModel} />
+      <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} />
 
       {/* Main container with responsive layouts */}
       {!currentUser ? (
@@ -857,10 +1071,14 @@ export default function App() {
             </div>
             
             <button
-              onClick={() => setActiveScreen("garaje")}
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full ${
+              onClick={() => {
+                setActiveScreen("garaje");
+                setIsRegistering(false);
+              }}
+              aria-label="Ver garaje de vehículos activos"
+              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
                 activeScreen === "garaje"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,221,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
+                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
                   : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
               }`}
             >
@@ -869,39 +1087,42 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveScreen("registrar")}
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full ${
-                activeScreen === "registrar"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,221,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
-              }`}
-            >
-              <PlusCircle className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Registrar</span>
-            </button>
-
-            <button
-              onClick={() => setActiveScreen("perfil")}
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full ${
-                activeScreen === "perfil"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,221,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
-              }`}
-            >
-              <User className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Perfil</span>
-            </button>
-
-            <button
               onClick={() => setActiveScreen("talleres")}
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full ${
+              aria-label="Buscar talleres mecánicos cercanos"
+              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
                 activeScreen === "talleres"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,221,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
+                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
                   : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
               }`}
             >
               <Wrench className="h-5 w-5 shrink-0" />
               <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Talleres</span>
+            </button>
+
+            <button
+              onClick={() => setActiveScreen("documentos")}
+              aria-label="Ver mis documentos"
+              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+                activeScreen === "documentos"
+                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
+                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+              }`}
+            >
+              <FileText className="h-5 w-5 shrink-0" />
+              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Documentos</span>
+            </button>
+
+            <button
+              onClick={() => setActiveScreen("perfil")}
+              aria-label="Configurar perfil de usuario y telemetría"
+              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+                activeScreen === "perfil"
+                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
+                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+              }`}
+            >
+              <User className="h-5 w-5 shrink-0" />
+              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Perfil</span>
             </button>
           </nav>
 
@@ -926,19 +1147,24 @@ export default function App() {
 
             {/* Dynamic Display of active screen */}
             <div className="mx-auto max-w-2xl">
-              {activeScreen === "registrar" && (
-                <div className="animate-fade-in flex flex-col gap-6">
-                  <CarProfileForm 
-                    onSave={handleSaveProfile} 
-                    isLoading={isLoading} 
-                    currentProfile={carProfile}
-                  />
-                </div>
-              )}
-
               {activeScreen === "garaje" && (
                 <div className="animate-fade-in flex flex-col gap-6">
-                  {selectedDetailVehicleId ? (() => {
+                  {isRegistering ? (
+                    <div className="animate-fade-in flex flex-col gap-4">
+                      <button
+                        onClick={() => setIsRegistering(false)}
+                        className="py-2 px-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2 self-start mb-2"
+                      >
+                        <ArrowLeft className="h-4 w-4 text-[#2ac1ff]" />
+                        <span>Volver al Garaje</span>
+                      </button>
+                      <CarProfileForm 
+                        onSave={handleSaveProfile} 
+                        isLoading={isLoading} 
+                        currentProfile={carProfile}
+                      />
+                    </div>
+                  ) : selectedDetailVehicleId ? (() => {
                     const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
                     if (!currentVeh) {
                       setSelectedDetailVehicleId(null);
@@ -980,7 +1206,7 @@ export default function App() {
                             onClick={() => {
                               setSelectedDetailVehicleId(null);
                               setCarProfile(currentVeh);
-                              setActiveScreen("registrar");
+                              setIsRegistering(true);
                             }}
                             className="py-1.5 px-3.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                           >
@@ -989,8 +1215,9 @@ export default function App() {
                         </div>
 
                         {/* Complete Vehicle Details Summary Panel */}
-                        <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden">
+                        <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden group">
                           <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-[#2ac1ff]/10 to-transparent rounded-bl-full pointer-events-none" />
+                          <SVGTachometer isMoto={isMotoType} />
                           
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div className="flex items-start gap-4">
@@ -1089,7 +1316,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setCarProfile(null);
-                            setActiveScreen("registrar");
+                            setIsRegistering(true);
                           }}
                           className="py-1.5 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 hover:border-[#2ac1ff]/40 text-[#2ac1ff] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
                         >
@@ -1133,12 +1360,13 @@ export default function App() {
                                   setSelectedDetailVehicleId(veh.id || null);
                                   setNewOdo(veh.currentKm.toString());
                                 }}
-                                className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer text-left ${
+                                className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer text-left overflow-hidden ${
                                   isSelected
                                     ? "bg-[#1e232d] border-[#2ac1ff]/40 shadow-[0_0_15px_rgba(42,193,255,0.15)]"
                                     : "bg-[#11141a]/40 hover:bg-[#1e232d]/45 border-white/5 hover:border-white/10"
                                 }`}
                               >
+                                <SVGTachometer isMoto={isMotoType} />
                                 {/* Basic Info Portion */}
                                 <div className="flex items-start gap-3.5">
                                   <div className={`p-2.5 rounded-lg border transition-all shrink-0 ${
@@ -1204,6 +1432,12 @@ export default function App() {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeScreen === "documentos" && (
+                <div className="animate-fade-in flex flex-col gap-6">
+                  <MisDocumentos />
                 </div>
               )}
 
@@ -1305,6 +1539,104 @@ export default function App() {
                     </section>
                   )}
 
+                  {/* SIMVA Alerts Preferences */}
+                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
+                      <Sliders className="h-4.5 w-4.5 text-[#2ac1ff]" />
+                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">PREFERENCIAS DEL ASISTENTE SIMVA</h4>
+                    </div>
+
+                    {/* Toggle rows */}
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-semibold text-white block">Notificaciones de Mantenimiento</label>
+                          <span className="text-[10px] text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextVal = !notiPush;
+                            setNotiPush(nextVal);
+                            localStorage.setItem("simva_noti_push", String(nextVal));
+                          }}
+                          className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${notiPush ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
+                        >
+                          <div className={`w-5 h-5 rounded-full bg-black transition-transform ${notiPush ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-semibold text-white block">Avisos Acústicos Críticos</label>
+                          <span className="text-[10px] text-on-surface-variant font-medium">Bip de advertencia al iniciar cuando hay tareas expiradas rojas.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextVal = !soundEnabled;
+                            setSoundEnabled(nextVal);
+                            localStorage.setItem("simva_sound_enabled", String(nextVal));
+                          }}
+                          className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${soundEnabled ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
+                        >
+                          <div className={`w-5 h-5 rounded-full bg-black transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Calibration Thresholds */}
+                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
+                      <Bell className="h-4.5 w-4.5 text-[#2ac1ff]" />
+                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">INTERVALOS DE ALERTA DE KILOMETRAJE</h4>
+                    </div>
+                    <p className="text-[10.5px] text-on-surface-variant">
+                      Personaliza cuántos kilómetros antes de que expire la tarea de mantenimiento se activará el aviso en sistema.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5 text-left">
+                        <label className="font-mono text-[9px] font-bold text-on-surface-variant text-amber-400 block uppercase">NOTIFICACIÓN AMBAR (PREVENTIVA)</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10000"
+                            value={warnDistance}
+                            onChange={(e) => {
+                              const v = Math.max(1, Number(e.target.value));
+                              setWarnDistance(v);
+                              localStorage.setItem("simva_warn_distance", String(v));
+                            }}
+                            className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                          />
+                          <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 text-left">
+                        <label className="font-mono text-[9px] font-bold text-on-surface-variant text-red-400 block uppercase">AVISO ROJO (URGENTE)</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10000"
+                            value={dangerDistance}
+                            onChange={(e) => {
+                              const v = Math.max(1, Number(e.target.value));
+                              setDangerDistance(v);
+                              localStorage.setItem("simva_danger_distance", String(v));
+                            }}
+                            className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                          />
+                          <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
                   {/* Reset zone */}
                   <section className="glass-card p-4 rounded-xl border border-red-500/15 bg-red-500/5 space-y-4">
                     <div className="space-y-0.5">
@@ -1346,6 +1678,8 @@ export default function App() {
               {activeScreen === "talleres" && (
                 <Talleres currentUserEmail={currentUser.email} />
               )}
+
+
             </div>
           </main>
         </div>
