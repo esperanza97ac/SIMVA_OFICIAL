@@ -450,3 +450,152 @@ export const SPANISH_MODELS: Record<string, string[]> = {
     "A290"
   ]
 };
+
+export const SPANISH_MOTO_BRANDS = [
+  "Honda",
+  "Yamaha",
+  "Kawasaki",
+  "Suzuki",
+  "BMW Motorrad",
+  "Ducati",
+  "KTM",
+  "Triumph",
+  "Harley-Davidson",
+  "Kymco",
+  "SYM",
+  "Piaggio",
+  "Vespa",
+  "Aprilia",
+  "Benelli"
+].sort();
+
+export const SPANISH_MOTO_MODELS: Record<string, string[]> = {
+  "Honda": [
+    "PCX 125",
+    "SH125i",
+    "X-ADV",
+    "Forza 125",
+    "Forza 350",
+    "CB500X",
+    "CB650R",
+    "Africa Twin CRF1100",
+    "NC750X",
+    "Rebel CMX500"
+  ],
+  "Yamaha": [
+    "TMAX",
+    "XMAX 125",
+    "XMAX 300",
+    "NMAX 125",
+    "MT-07",
+    "MT-09",
+    "Tracer 7",
+    "Tracer 9",
+    "Ténéré 700",
+    "R7"
+  ],
+  "Kawasaki": [
+    "Z900",
+    "Z650",
+    "Ninja 400",
+    "Ninja 650",
+    "Ninja ZX-10R",
+    "Versys 650",
+    "Versys 1000",
+    "Vulcan S"
+  ],
+  "Suzuki": [
+    "GSX-8S",
+    "V-Strom 650",
+    "V-Strom 800DE",
+    "Address 125",
+    "Burgman 125",
+    "Burgman 400",
+    "SV650",
+    "GSX-S1000"
+  ],
+  "BMW Motorrad": [
+    "R 1250 GS",
+    "R 1300 GS",
+    "F 750 GS",
+    "F 850 GS",
+    "F 900 R",
+    "C 400 GT",
+    "S 1000 RR",
+    "R nineT"
+  ],
+  "Ducati": [
+    "Monster",
+    "Multistrada V4",
+    "Scrambler",
+    "Panigale V4",
+    "Hypermotard",
+    "Diavel"
+  ],
+  "KTM": [
+    "Duke 125",
+    "Duke 390",
+    "Duke 790",
+    "Duke 890",
+    "1290 Super Adventure",
+    "RC 390"
+  ],
+  "Triumph": [
+    "Trident 660",
+    "Tiger Sport 660",
+    "Tiger 900",
+    "Street Triple",
+    "Bonneville T120",
+    "Scrambler 900"
+  ],
+  "Harley-Davidson": [
+    "Sportster S",
+    "Pan America 1250",
+    "Fat Boy",
+    "Iron 883",
+    "Street Glide",
+    "Softail Standard"
+  ],
+  "Kymco": [
+    "Agility City 125",
+    "Super Dink 125",
+    "DTX 125",
+    "DTX 350",
+    "AK 550"
+  ],
+  "SYM": [
+    "Symphony 125",
+    "Jet X 125",
+    "Cruisym 125",
+    "Maxsym TL 508",
+    "Fiddle 125"
+  ],
+  "Piaggio": [
+    "Liberty 125",
+    "Medley 125",
+    "Beverly 300",
+    "Beverly 400",
+    "MP3 300 hpe"
+  ],
+  "Vespa": [
+    "Primavera 125",
+    "GTS 125",
+    "GTS 300",
+    "Sprint 125",
+    "Elettrica"
+  ],
+  "Aprilia": [
+    "SR GT 125",
+    "Tuono 660",
+    "RS 660",
+    "Tuareg 660",
+    "RSV4"
+  ],
+  "Benelli": [
+    "TRK 502",
+    "TRK 702",
+    "Leoncino 500",
+    "Imperiale 400",
+    "Keeway Superlight"
+  ]
+};

@@ -1,11 +1,15 @@
 export type FuelType = "Gasolina" | "Diésel" | "Híbrido" | "Eléctrico";
+export type VehicleType = "Coche" | "Moto";
 
 export interface CarProfile {
+  id?: string; // Support possible multiple or clear single identification
+  vehicleType?: VehicleType;
   makeModel: string;
   fuelType: FuelType;
   year: number;
   currentKm: number;
   monthlyKm: number;
+  vin?: string;
   registrationDate?: string; // Optional date for time predictions
 }
 

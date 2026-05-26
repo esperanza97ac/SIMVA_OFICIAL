@@ -10,11 +10,16 @@ import {
   Gauge, 
   Wrench, 
   ArrowRight,
-  TrendingUp
+  Bike
 } from "lucide-react";
-import { CarProfile, FuelType } from "../types";
+import { CarProfile, FuelType, VehicleType } from "../types";
 
-import { SPANISH_BRANDS, SPANISH_MODELS } from "../data/spanishVehicles";
+import { 
+  SPANISH_BRANDS, 
+  SPANISH_MODELS,
+  SPANISH_MOTO_BRANDS,
+  SPANISH_MOTO_MODELS
+} from "../data/spanishVehicles";
 
 interface CarProfileFormProps {
   onSave: (
@@ -28,6 +33,7 @@ interface CarProfileFormProps {
 }
 
 export default function CarProfileForm({ onSave, isLoading, currentProfile }: CarProfileFormProps) {
+  const [vehicleType, setVehicleType] = useState<VehicleType>("Coche");
   const [brand, setBrand] = useState("");
   const [brandSearch, setBrandSearch] = useState("");
   const [isBrandOpen, setIsBrandOpen] = useState(false);
@@ -40,14 +46,20 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
   const [year, setYear] = useState<number>(2024);
   const [currentKm, setCurrentKm] = useState<string>("");
   const [monthlyKm, setMonthlyKm] = useState<number>(1000);
+  const [vin, setVin] = useState("");
 
   // New slider and input fields for "ÚLTIMO MANTENIMIENTO"
   const [lastMaintMonths, setLastMaintMonths] = useState<number>(6);
   const [lastMaintKm, setLastMaintKm] = useState<string>("");
 
+  // GDPR consent state required for registration
+  const [legalChecked, setLegalChecked] = useState(currentProfile ? true : false);
+
   // Sync state if currentProfile exists
   useEffect(() => {
     if (currentProfile) {
+      setVehicleType(currentProfile.vehicleType || "Coche");
+      setVin(currentProfile.vin || "");
       // Split brand and model if saved as joined makeModel
       const parts = currentProfile.makeModel.split(" ");
       if (parts.length > 0) {
@@ -67,14 +79,18 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
       setYear(currentProfile.year);
       setCurrentKm(currentProfile.currentKm.toString());
       setMonthlyKm(currentProfile.monthlyKm || 1000);
+      setLegalChecked(true);
     }
   }, [currentProfile]);
 
-  const filteredBrands = SPANISH_BRANDS.filter((b) =>
+  const brandsList = vehicleType === "Moto" ? SPANISH_MOTO_BRANDS : SPANISH_BRANDS;
+  const modelsList = vehicleType === "Moto" ? SPANISH_MOTO_MODELS : SPANISH_MODELS;
+
+  const filteredBrands = brandsList.filter((b) =>
     b.toLowerCase().includes(brandSearch.trim().toLowerCase())
   );
 
-  const availableModels = brand ? (SPANISH_MODELS[brand] || []) : [];
+  const availableModels = brand ? (modelsList[brand] || []) : [];
   const filteredModels = availableModels.filter((m) =>
     m.toLowerCase().includes(modelSearch.trim().toLowerCase())
   );
@@ -91,11 +107,14 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
     const finalLastKm = lastMaintKm ? Number(lastMaintKm) : undefined;
 
     onSave({
+      id: currentProfile?.id || `veh-${Date.now()}`,
+      vehicleType,
       makeModel: fullMakeModel,
       fuelType,
       year: Number(year),
       currentKm: finalKm,
       monthlyKm: Number(monthlyKm),
+      vin: vin.trim() || undefined
     }, true, lastMaintMonths, finalLastKm);
   };
 
@@ -119,7 +138,53 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
         
         {/* Basic Info Glass Card */}
         <section className="glass-card p-5 rounded-2xl space-y-5 shadow-lg border border-white/10">
-                {/* Brand dropdown */}
+          
+          {/* VEHICLE TYPE SELECTOR */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+              TIPO DE VEHÍCULO
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleType("Coche");
+                  setBrand("");
+                  setBrandSearch("");
+                  setModel("");
+                  setModelSearch("");
+                }}
+                className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                  vehicleType === "Coche"
+                    ? "bg-primary-fixed-dim/15 border-primary-fixed-dim text-primary-fixed-dim shadow-[0_0_12px_rgba(42,193,255,0.25)]"
+                    : "bg-surface-container/50 border-white/5 text-on-surface-variant hover:text-white"
+                }`}
+              >
+                <Car className="h-4 w-4" />
+                <span>COCHE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVehicleType("Moto");
+                  setBrand("");
+                  setBrandSearch("");
+                  setModel("");
+                  setModelSearch("");
+                }}
+                className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border font-mono text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                  vehicleType === "Moto"
+                    ? "bg-primary-fixed-dim/15 border-primary-fixed-dim text-primary-fixed-dim shadow-[0_0_12px_rgba(42,193,255,0.25)]"
+                    : "bg-surface-container/50 border-white/5 text-on-surface-variant hover:text-white"
+                }`}
+              >
+                <Bike className="h-4 w-4" />
+                <span>MOTO</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Brand dropdown */}
           <div className="flex flex-col gap-1.5 relative">
             <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
               <span>MARCA DEL VEHÍCULO</span>
@@ -313,6 +378,24 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
           </div>
 
+          {/* VIN optional field */}
+          <div className="flex flex-col gap-1.5 pt-1.5">
+            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+              <span>NÚMERO DE BASTIDOR (VIN)</span>
+              <span className="text-[9px] font-mono text-primary-fixed-dim uppercase bg-primary-fixed-dim/5 px-2 py-0.5 rounded border border-primary-fixed-dim/10 tracking-widest font-extrabold select-none">
+                PRECI_OK
+              </span>
+            </label>
+            <input
+              type="text"
+              placeholder="Número de bastidor de 17 caracteres (opcional)"
+              value={vin}
+              onChange={(e) => setVin(e.target.value.toUpperCase())}
+              maxLength={17}
+              className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white font-mono uppercase tracking-widest focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all placeholder-primary-600/50"
+            />
+          </div>
+
         </section>
 
         {/* Fuel Type Tabs Glass Card */}
@@ -432,43 +515,42 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
           </div>
         </section>
 
-        {/* Embedded Monthly usage config to complete algorithmic support beautifully */}
-        <section className="glass-card p-5 rounded-2xl space-y-4 relative overflow-hidden border border-white/10">
-          <div className="flex items-center justify-between gap-1.5">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary-fixed-dim" />
-              <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                USO PROMEDIO MENSUAL ESTIMADO
-              </label>
-            </div>
-            <span className="font-mono text-xs font-extrabold text-primary-fixed-dim bg-primary-fixed-dim/10 px-2 py-0.5 rounded">
-              {monthlyKm.toLocaleString("es-ES")} KM
+        {/* GDPR Legal Acknowledgment checkbox for Vehicle Registration */}
+        <section className="glass-card p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4 shadow-lg">
+          <div>
+            <span className="font-mono text-[9px] font-bold text-primary-fixed-dim/95 uppercase tracking-widest block">
+              CONFORMIDAD LEGAL Y REGISTRO (RGPD)
             </span>
+            <p className="text-[10px] text-on-surface-variant font-medium mt-1">
+              De acuerdo con la LOPDGDD y el RGPD europeo.
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <label className="flex items-start gap-3 cursor-pointer select-none group">
             <input
-              type="range"
-              min="200"
-              max="5000"
-              step="100"
-              value={monthlyKm}
-              onChange={(e) => setMonthlyKm(Number(e.target.value))}
-              className="flex-1 accent-primary-fixed-dim h-1 bg-primary-900 rounded-lg appearance-none cursor-pointer"
+              type="checkbox"
+              required
+              id="legalCheckbox"
+              checked={legalChecked}
+              onChange={(e) => setLegalChecked(e.target.checked)}
+              className="mt-1 rounded bg-black border border-white/20 text-primary-fixed-dim focus:ring-0 cursor-pointer h-4.5 w-4.5 shrink-0"
             />
-          </div>
+            <span className="text-[11px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+              Acepto la Política de Privacidad y consiento expresamente el tratamiento de los datos técnicos y kilometraje de mi coche para la calibración del diagnóstico SIMVA. <strong className="text-secondary-fixed-dim font-bold">(Obligatorio)</strong>
+            </span>
+          </label>
         </section>
 
         {/* Main interactive submit action */}
         <div className="pt-2">
           <button
             type="submit"
-            disabled={isLoading || !brand.trim()}
+            disabled={isLoading || !brand.trim() || !legalChecked}
             className="w-full py-4 bg-primary-fixed-dim text-black hover:bg-white hover:text-black font-mono text-[14px] font-bold rounded-xl active:scale-95 duration-100 transition-all neon-glow-blue flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider disabled:opacity-40"
           >
             {isLoading ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
-                <span>SINCRONIZANDO TELEMETRÍA...</span>
+                <span>GUARDANDO VEHÍCULO...</span>
               </>
             ) : (
               <>

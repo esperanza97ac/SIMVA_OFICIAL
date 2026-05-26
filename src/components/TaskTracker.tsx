@@ -168,15 +168,15 @@ export default function TaskTracker({
     let message = "";
 
     if (task.cada_km > 0) {
-      if (kmRemaining < 4000) {
+      if (kmRemaining < 500) {
         statusColor = "danger";
-        message = `¡Atención! Restan menos de 4.000 km (${kmRemaining.toLocaleString("es-ES")} km) para el recambio.`;
-      } else if (kmRemaining <= 6000) {
+        message = `¡Atención! Restan menos de 500 km (${kmRemaining.toLocaleString("es-ES")} km) para el recambio.`;
+      } else if (kmRemaining <= 1000) {
         statusColor = "warning";
-        message = `¡Precaución! Rango de advertencia (restan ${kmRemaining.toLocaleString("es-ES")} km).`;
+        message = `¡Precaución! Rango de advertencia ámbar (restan ${kmRemaining.toLocaleString("es-ES")} km).`;
       } else {
         statusColor = "ok";
-        message = "Funcionamiento correcto y seguro (más de 6.000 km restantes).";
+        message = "Funcionamiento correcto y seguro (más de 1.000 km restantes).";
       }
     } else {
       // Time-only task backup rules
@@ -303,10 +303,10 @@ export default function TaskTracker({
           <Gauge className="h-8 w-8 text-accent-gold animate-pulse" />
         </div>
 
-        {/* Metric 2: Warning Alerts (🟡 Cuidado / Atenciones en Rango 4000km - 6000km) */}
+        {/* Metric 2: Warning Alerts (🟡 Cuidado / Atenciones en Rango 500km - 1000km) */}
         <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-amber-500">ADVERTENCIA (4K - 6K KM)</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-amber-500">ADVERTENCIA (500 - 1000 KM)</span>
             <span className="font-mono text-2xl font-black text-amber-400 mt-1 uppercase tracking-tight">
               {warningCount} <span className="text-xs text-amber-500 font-sans font-medium">Tareas</span>
             </span>
@@ -317,10 +317,10 @@ export default function TaskTracker({
           </div>
         </div>
 
-        {/* Metric 3: Critical alerts Overdue (🔴 Peligro inmediato! <4000km) */}
+        {/* Metric 3: Critical alerts Overdue (🔴 Peligro inmediato! <500km) */}
         <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-red-550">PELIGRO CRÍTICO (&lt;4K KM)</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-red-550">PELIGRO CRÍTICO (&lt;500 KM)</span>
             <span className="font-mono text-2xl font-black text-red-400 mt-1 uppercase tracking-tight">
               {criticalCount} <span className="text-xs text-red-500 font-sans font-medium">Urgentes</span>
             </span>
@@ -344,10 +344,10 @@ export default function TaskTracker({
             </h4>
             <div className="text-xs text-primary-300 space-y-1.5 mt-1 font-sans">
               {criticalCount > 0 && (
-                <p>• Alarma de <span className="text-red-400 font-bold uppercase underline">Rojo Peligro (&lt; 4.000 km disponibles):</span> Tienes <strong className="text-red-400 font-extrabold">{criticalCount} repuestos o tareas críticas</strong> en estado terminal con urgencia de visita al taller mecánico.</p>
+                <p>• Alarma de <span className="text-red-400 font-bold uppercase underline">Rojo Peligro (&lt; 500 km disponibles):</span> Tienes <strong className="text-red-400 font-extrabold">{criticalCount} repuestos o tareas críticas</strong> en estado crítico peligroso.</p>
               )}
               {warningCount > 0 && (
-                <p>• Aviso en <span className="text-amber-400 font-bold uppercase">Ámbar (Entre 4.000 km y 6.000 km restantes):</span> Tienes <strong className="text-amber-400 font-extrabold">{warningCount} elementos preventivos</strong> entrando en vida de desgaste de seguridad.</p>
+                <p>• Aviso en <span className="text-amber-400 font-bold uppercase">Ámbar (Entre 500 km y 1.000 km restantes):</span> Tienes <strong className="text-amber-400 font-extrabold">{warningCount} elementos preventivos</strong> en rango de advertencia.</p>
               )}
             </div>
           </div>
@@ -597,11 +597,11 @@ export default function TaskTracker({
                   {/* Status subtitle helper */}
                   <div className="text-[10px] text-left">
                     {statusColor === "danger" ? (
-                      <span className="text-red-400 font-semibold">• Semáforo Rojo (<strong className="font-black">&lt;4.500 km</strong>). Requiere sustitución inmediata.</span>
+                      <span className="text-red-400 font-semibold">• Semáforo Rojo (<strong className="font-black">&lt; 500 km</strong>). Requiere sustitución inmediata.</span>
                     ) : statusColor === "warning" ? (
-                      <span className="text-amber-400 font-semibold">• Semáforo Ámbar (<strong className="font-semibold">4.000 - 6.000 km</strong>). Inspeccionar pronto.</span>
+                      <span className="text-amber-400 font-semibold">• Semáforo Ámbar (<strong className="font-semibold">500 - 1.000 km</strong>). Inspeccionar pronto.</span>
                     ) : (
-                      <span className="text-emerald-400 font-semibold">• Semáforo Verde (<strong className="font-semibold">&gt;6.000 km</strong>). Kilometraje de viaje seguro.</span>
+                      <span className="text-emerald-400 font-semibold">• Semáforo Verde (<strong className="font-semibold">&gt; 1.000 km</strong>). Kilometraje de viaje seguro.</span>
                     )}
                   </div>
                 </div>
@@ -612,7 +612,7 @@ export default function TaskTracker({
                     <span className="font-mono text-[9px] uppercase tracking-wider text-primary-400">Restan Kilómetros</span>
                     {task.cada_km > 0 ? (
                       <span className={`font-mono text-xs md:text-sm font-bold mt-0.5 ${
-                        kmRemaining < 4000 ? "text-red-400 font-black animate-pulse" : kmRemaining <= 6000 ? "text-amber-400" : "text-white"
+                        kmRemaining < 500 ? "text-red-400 font-black animate-pulse" : kmRemaining <= 1000 ? "text-amber-400" : "text-white"
                       }`}>
                         {kmRemaining <= 0 
                           ? `Excedido por ${Math.abs(kmRemaining).toLocaleString("es-ES")} km` 

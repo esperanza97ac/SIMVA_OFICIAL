@@ -200,7 +200,7 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           SISTEMA DE MONITOREO VEHICULAR ACTIVO
         </p>
         <p className="text-xs text-on-surface-variant mt-2 max-w-xs mx-auto">
-          Gestiona el mantenimiento predictivo de tu vehículo sincronizado en la nube.
+          Gestiona el mantenimiento predictivo de tu vehículo de forma inteligente y segura.
         </p>
       </div>
 
