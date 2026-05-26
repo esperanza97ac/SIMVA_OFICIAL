@@ -111,7 +111,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
           Añadir Vehículo
         </h2>
         <p className="text-xs text-on-surface-variant font-medium">
-          Introduce los detalles técnicos para sincronizar la telemetría de tu unidad.
+          Introduce los detalles técnicos de tu vehículo.
         </p>
       </header>
 

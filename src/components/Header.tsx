@@ -1,5 +1,6 @@
-import { Car, Bell, Clock } from "lucide-react";
+import { Bell, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { SimvaLogo } from "./SimvaLogo";
 
 interface HeaderProps {
   hasCar: boolean;
@@ -21,9 +22,9 @@ export default function Header({ hasCar, carName }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 h-16 flex justify-between items-center px-6 bg-black/60 backdrop-blur-xl border-b border-white/10">
-      <div className="flex items-center gap-2">
-        <Car className="h-5 w-5 text-primary-fixed-dim" />
-        <h1 className="font-sans text-xl font-bold tracking-tighter text-white">SIMVA</h1>
+      <div className="flex items-center gap-2.5">
+        <SimvaLogo className="h-6.5 w-6.5 shrink-0" />
+        <h1 className="font-sans text-lg font-black tracking-widest text-white leading-none">SIMVA</h1>
         {hasCar && (
           <span className="hidden sm:inline-block ml-3 rounded-full bg-primary-fixed-dim/10 px-3 py-0.5 text-[10px] font-mono font-bold uppercase text-primary-fixed-dim border border-primary-fixed-dim/20">
             {carName}

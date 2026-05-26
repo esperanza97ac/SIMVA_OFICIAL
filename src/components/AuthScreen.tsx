@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 import { AlertTriangle, Key, Mail, ChevronRight, Copy, Check } from "lucide-react";
+import { SimvaLogo } from "./SimvaLogo";
 
 function UnauthorizedDomainError() {
   const [copied, setCopied] = useState(false);
@@ -86,6 +87,10 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<React.ReactNode | null>(null);
   const [loading, setLoading] = useState(false);
+  const [gdprChecked, setGdprChecked] = useState(false);
+  const [telemetryChecked, setTelemetryChecked] = useState(false);
+  const [newsletterChecked, setNewsletterChecked] = useState(false);
+  const [showRgpdDetails, setShowRgpdDetails] = useState(false);
 
   // Translate Firebase errors to Spanish user-friendly messages
   const getErrorMessage = (errCode: string): React.ReactNode => {
@@ -120,6 +125,21 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isLogin) {
+      if (!gdprChecked || !telemetryChecked) {
+        setError(
+          <div className="space-y-1">
+            <p className="font-bold">Consentimiento RGPD requerido</p>
+            <p className="text-[11px] leading-relaxed text-red-300">
+              Debes marcar las casillas obligatorias de aceptación de la Política de Privacidad y el procesamiento técnico de telemetría para poder completar el registro.
+            </p>
+          </div>
+        );
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -139,6 +159,21 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
   const handleGoogleAuth = async () => {
     setError(null);
+
+    if (!isLogin) {
+      if (!gdprChecked || !telemetryChecked) {
+        setError(
+          <div className="space-y-1">
+            <p className="font-bold">Consentimiento RGPD requerido (Google Auth)</p>
+            <p className="text-[11px] leading-relaxed text-red-300">
+              Para registrar una nueva cuenta con Google, primero debes marcar las casillas de aceptación de la Política de Privacidad y telemetría de SIMVA abajo.
+            </p>
+          </div>
+        );
+        return;
+      }
+    }
+
     setLoading(true);
     const provider = new GoogleAuthProvider();
 
@@ -154,13 +189,14 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto animate-fade-in py-8 px-4">
-      {/* SIMVA Logo Header */}
-      <div className="text-center mb-8">
-        <h1 className="font-sans text-3xl font-black text-white tracking-widest uppercase">
+    <div className="w-full max-w-md mx-auto animate-fade-in py-6 px-4">
+      {/* SIMVA Logo Header with the new official branding logo */}
+      <div className="text-center mb-6 flex flex-col items-center">
+        <SimvaLogo className="h-16 w-16 mb-2.5 animate-pulse drop-shadow-[0_0_15px_rgba(42,193,255,0.4)]" />
+        <h1 className="font-sans text-3xl font-black text-white tracking-widest uppercase leading-none">
           SIMVA
         </h1>
-        <p className="font-mono text-[9px] text-primary-fixed-dim uppercase tracking-wider mt-1">
+        <p className="font-mono text-[9px] text-primary-fixed-dim uppercase tracking-wider mt-2">
           SISTEMA DE MONITOREO VEHICULAR ACTIVO
         </p>
         <p className="text-xs text-on-surface-variant mt-2 max-w-xs mx-auto">
@@ -255,6 +291,73 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
               />
             </div>
           </div>
+
+          {/* GDPR / RGPD Legal Consents - Granular Spanish regulatory fields */}
+          {!isLogin && (
+            <div className="space-y-3 pt-3 pb-1 border-t border-white/5 animate-fade-in text-left">
+              <span className="font-mono text-[9px] font-bold text-primary-fixed-dim/90 uppercase tracking-widest block mb-1.5">
+                PERMISOS LEGALES Y RGPD (OBLIGATORIO)
+              </span>
+              
+              {/* Checkbox 1: GDPR Policy */}
+              <label className="flex items-start gap-2 px-1 cursor-pointer group select-none">
+                <input
+                  type="checkbox"
+                  checked={gdprChecked}
+                  onChange={(e) => setGdprChecked(e.target.checked)}
+                  className="mt-0.5 rounded bg-black border border-white/20 text-primary-fixed-dim focus:ring-0 cursor-pointer h-4 w-4 shrink-0"
+                />
+                <span className="text-[10.5px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+                  Acepto expresamente la <span className="text-primary-fixed-dim underline decoration-dotted">Política de Privacidad</span> y los de Términos de Servicio de SIMVA conforme al RGPD/LOPDGDD. <strong className="text-secondary-fixed-dim font-bold">(Obligatorio)</strong>
+                </span>
+              </label>
+
+              {/* Checkbox 2: Telemetry treatment */}
+              <label className="flex items-start gap-2 px-1 cursor-pointer group select-none">
+                <input
+                  type="checkbox"
+                  checked={telemetryChecked}
+                  onChange={(e) => setTelemetryChecked(e.target.checked)}
+                  className="mt-0.5 rounded bg-black border border-white/20 text-primary-fixed-dim focus:ring-0 cursor-pointer h-4 w-4 shrink-0"
+                />
+                <span className="text-[10.5px] leading-relaxed text-gray-300 group-hover:text-white transition-colors">
+                  Consiento el tratamiento de los datos de telemetría, alertas mecánicas e intervalos de mi coche para el mantenimiento predictivo. <strong className="text-secondary-fixed-dim font-bold">(Obligatorio)</strong>
+                </span>
+              </label>
+
+              {/* Checkbox 3: News / Alert alerts */}
+              <label className="flex items-start gap-2 px-1 cursor-pointer group select-none">
+                <input
+                  type="checkbox"
+                  checked={newsletterChecked}
+                  onChange={(e) => setNewsletterChecked(e.target.checked)}
+                  className="mt-0.5 rounded bg-black border border-white/20 text-primary-fixed-dim focus:ring-0 cursor-pointer h-4 w-4 shrink-0"
+                />
+                <span className="text-[10.5px] leading-relaxed text-gray-400 group-hover:text-gray-300 transition-colors">
+                  Deseo recibir alertas de mantenimiento preventivo automotriz y boletines técnicos por correo electrónico. <span className="text-on-surface-variant font-semibold">(Opcional)</span>
+                </span>
+              </label>
+
+              {/* Informative Layered Summary Container */}
+              <div className="mt-3 bg-black/40 border border-white/5 rounded-lg p-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowRgpdDetails(!showRgpdDetails)}
+                  className="w-full flex items-center justify-between text-[10px] font-mono text-primary-fixed-dim hover:text-white transition-colors uppercase tracking-wider cursor-pointer font-bold"
+                >
+                  <span>Info de Protección de Datos Clara</span>
+                  <span>{showRgpdDetails ? "Ocultar" : "Mostrar"}</span>
+                </button>
+                {showRgpdDetails && (
+                  <div className="mt-2 text-[9.5px] text-gray-400 leading-relaxed space-y-1.5 pt-1.5 border-t border-white/5 font-sans">
+                    <p><strong>Responsable:</strong> SIMVA Automoción Digital S.L.</p>
+                    <p><strong>Finalidad:</strong> Gestión de telemetría vehicular, alertas mecánicas del motor y control de recambios.</p>
+                    <p><strong>Derechos:</strong> Acceso, rectificación, portabilidad y supresión de datos escribiendo a privacidad@simva.es o eliminando tu garaje desde la sección Perfil.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button

@@ -8,6 +8,7 @@ import Header from "./components/Header";
 import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
+import { SimvaLogo } from "./components/SimvaLogo";
 import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut } from "lucide-react";
 
 // Firebase integration
@@ -437,9 +438,9 @@ export default function App() {
   if (authChecking) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-white p-6">
-        <Car className="h-10 w-10 text-primary-fixed-dim animate-bounce mb-4" />
-        <h2 className="font-sans text-lg font-black tracking-widest uppercase">SIMVA</h2>
-        <div className="flex gap-1 items-center mt-2 font-mono text-[9px] uppercase text-primary-fixed-dim/70 tracking-widest select-none">
+        <SimvaLogo className="h-12 w-12 mb-4 animate-bounce shrink-0 drop-shadow-[0_0_15px_rgba(42,193,255,0.4)]" />
+        <h2 className="font-sans text-lg font-black tracking-widest uppercase text-white">SIMVA</h2>
+        <div className="flex gap-1.5 items-center mt-2.5 font-mono text-[9px] uppercase text-primary-fixed-dim/70 tracking-widest select-none">
           <span className="h-1.5 w-1.5 rounded-full bg-primary-fixed-dim animate-ping" />
           <span>INICIALIZANDO TELEMETRÍA CENTRAL...</span>
         </div>
