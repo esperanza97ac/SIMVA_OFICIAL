@@ -9,7 +9,8 @@ import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
-import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench } from "lucide-react";
+import Talleres from "./components/Talleres";
 
 // Firebase integration
 import { auth, db, handleFirestoreError, OperationType } from "./firebase";
@@ -89,7 +90,7 @@ export default function App() {
   const [authChecking, setAuthChecking] = useState(true);
 
   // Selected visual view screen (registrar, garaje or perfil)
-  const [activeScreen, setActiveScreen] = useState<"registrar" | "garaje" | "perfil">("registrar");
+  const [activeScreen, setActiveScreen] = useState<"registrar" | "garaje" | "perfil" | "talleres">("registrar");
   const [selectedDetailVehicleId, setSelectedDetailVehicleId] = useState<string | null>(null);
 
   // Helper function to sync Tasks to Cloud
@@ -890,6 +891,18 @@ export default function App() {
               <User className="h-5 w-5 shrink-0" />
               <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Perfil</span>
             </button>
+
+            <button
+              onClick={() => setActiveScreen("talleres")}
+              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full ${
+                activeScreen === "talleres"
+                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,221,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
+                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+              }`}
+            >
+              <Wrench className="h-5 w-5 shrink-0" />
+              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Talleres</span>
+            </button>
           </nav>
 
           {/* Main Content Viewport */}
@@ -1273,7 +1286,7 @@ export default function App() {
 
                       <form onSubmit={handleUpdateOdometer} className="flex gap-2.5 items-end">
                         <div className="flex-1 flex flex-col gap-1">
-                          <label className="font-mono text-[9px] font-bold text-on-surface-variant">KILÓMETROS DEL SENSOR</label>
+                           <label className="font-mono text-[9px] font-bold text-on-surface-variant">KILÓMETROS DEL SENSOR</label>
                           <input
                             type="number"
                             min={0}
@@ -1328,6 +1341,10 @@ export default function App() {
                     </div>
                   </section>
                 </div>
+              )}
+
+              {activeScreen === "talleres" && (
+                <Talleres currentUserEmail={currentUser.email} />
               )}
             </div>
           </main>

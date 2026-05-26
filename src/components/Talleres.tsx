@@ -1,0 +1,452 @@
+import { useState, useEffect, FormEvent } from "react";
+import { 
+  Search, 
+  MapPin, 
+  Navigation, 
+  Compass, 
+  Loader2, 
+  Phone, 
+  ExternalLink,
+  Clock,
+  Wrench,
+  AlertCircle
+} from "lucide-react";
+
+interface Workshop {
+  id: number;
+  lat: number;
+  lon: number;
+  tags?: {
+    name?: string;
+    "addr:street"?: string;
+    "addr:housenumber"?: string;
+    "addr:postcode"?: string;
+    "addr:city"?: string;
+    phone?: string;
+    "contact:phone"?: string;
+    opening_hours?: string;
+    website?: string;
+  };
+}
+
+interface TalleresProps {
+  currentUserEmail?: string | null;
+}
+
+export default function Talleres({ currentUserEmail }: TalleresProps) {
+  const [address, setAddress] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(40.416775); // Default to Madrid center
+  const [longitude, setLongitude] = useState<number | null>(-3.703790);
+  const [workshops, setWorkshops] = useState<Workshop[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusText, setStatusText] = useState("");
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [lastSearchedKeyword, setLastSearchedKeyword] = useState("Centro de Madrid");
+  const [searchRadius, setSearchRadius] = useState<number>(5000);
+
+  // Haversine distance formula to calculate absolute spacing in meters
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+      Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // distance in meters
+  };
+
+  const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
+    const overpassUrl = "https://overpass-api.de/api/interpreter";
+    
+    // Consulta que busca talleres con cualquiera de estas etiquetas
+    const query = `
+      [out:json];
+      (
+        node["shop"="car_repair"](around:${radius},${lat},${lon});
+        node["amenity"="vehicle_repair"](around:${radius},${lat},${lon});
+        node["service:vehicle:repair"="yes"](around:${radius},${lat},${lon});
+        way["shop"="car_repair"](around:${radius},${lat},${lon});
+      );
+      out body;
+    `;
+
+    setStatusText(`Buscando en un radio de ${(radius / 1000).toFixed(0)} km (${radius}m)...`);
+
+    const response = await fetch(overpassUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ data: query })
+    });
+    
+    if (!response.ok) {
+      throw new Error("El motor Overpass API no responde. Por favor, reintenta en unos instantes.");
+    }
+    
+    const data = await response.json();
+    const elements = (data.elements || []) as Workshop[];
+    
+    // Si no encuentra nada en el radio inicial, intenta con uno mayor
+    if (elements.length === 0 && radius < 15000) {
+      console.log(`No se encontraron talleres en ${radius}m. Ampliando búsqueda...`);
+      return findCarRepairs(lat, lon, radius + 5000);
+    }
+    
+    setSearchRadius(radius);
+    return elements;
+  };
+
+  const fetchWorkshopsOverpass = async (lat: number, lon: number) => {
+    setIsLoading(true);
+    setSearchError(null);
+    setStatusText("Buscando talleres mecánicos cercanos...");
+
+    try {
+      const elements = await findCarRepairs(lat, lon, 5000);
+      
+      // Filter out elements that don't have valid coordinates
+      let validWorkshops = elements.filter(el => el.lat !== undefined && el.lon !== undefined);
+
+      // Sort by closeness using Haversine
+      validWorkshops.sort((a, b) => {
+        const distA = calculateDistance(lat, lon, a.lat, a.lon);
+        const distB = calculateDistance(lat, lon, b.lat, b.lon);
+        return distA - distB;
+      });
+
+      setWorkshops(validWorkshops);
+      setStatusText(`Sincronización completa: ${validWorkshops.length} talleres encontrados.`);
+    } catch (err: any) {
+      console.error("Overpass API error:", err);
+      setSearchError("Error consultando la base de datos de OpenStreetMap. Por favor, intenta de nuevo.");
+      setStatusText("");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddressSearch = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!address.trim()) return;
+
+    setIsLoading(true);
+    setSearchError(null);
+    setStatusText("Buscando coordenadas de la dirección...");
+
+    try {
+      // Free open Nominatim geocoding endpoint
+      const geocodeResp = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
+      );
+      
+      if (!geocodeResp.ok) {
+        throw new Error("No se pudo conectar con el servidor de geocodificación.");
+      }
+
+      const results = await geocodeResp.json();
+      if (results && results.length > 0) {
+        const targetLat = parseFloat(results[0].lat);
+        const targetLon = parseFloat(results[0].lon);
+        
+        setLatitude(targetLat);
+        setLongitude(targetLon);
+        setLastSearchedKeyword(address);
+        
+        // Fetch workshops around these new coordinates
+        await fetchWorkshopsOverpass(targetLat, targetLon);
+      } else {
+        setSearchError("No se ha podido localizar la dirección introducida. Por favor, sé más específico (Ej: 'Calle de Alcalá 45, Madrid').");
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error("Geocoding error:", err);
+      setSearchError("Error resolviendo la dirección física. Comprueba tu conexión a internet.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) {
+      setSearchError("La geolocalización no está soportada por tu navegador.");
+      return;
+    }
+
+    setIsLoading(true);
+    setSearchError(null);
+    setStatusText("Accediendo a la señal GPS del dispositivo...");
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const userLat = pos.coords.latitude;
+        const userLon = pos.coords.longitude;
+        setLatitude(userLat);
+        setLongitude(userLon);
+        setLastSearchedKeyword("Tu ubicación GPS actual");
+        setAddress(""); // Clear custom address text
+        await fetchWorkshopsOverpass(userLat, userLon);
+      },
+      (err) => {
+        console.error("GPS error:", err);
+        setLastSearchedKeyword("Centro de Madrid");
+        setSearchError("Permiso de localización denegado o señal GPS no disponible.");
+        setIsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  const handleQuickLoc = (cityName: string, lat: number, lon: number) => {
+    setLatitude(lat);
+    setLongitude(lon);
+    setAddress("");
+    setLastSearchedKeyword(cityName);
+    fetchWorkshopsOverpass(lat, lon);
+  };
+
+  // Trigger initial search to display something beautiful immediately
+  useEffect(() => {
+    if (latitude && longitude) {
+      fetchWorkshopsOverpass(latitude, longitude);
+    }
+  }, []);
+
+  return (
+    <div className="animate-fade-in space-y-6 text-left">
+      <header className="mb-2">
+        <h2 className="font-sans text-2xl font-black text-white tracking-tight leading-none uppercase flex items-center gap-2">
+          <Wrench className="h-6 w-6 text-[#2ac1ff]" />
+          <span>Talleres de Confianza</span>
+        </h2>
+        <p className="text-xs text-on-surface-variant font-medium mt-1 uppercase tracking-wider font-mono">
+          BÚSQUEDA GEOLOCALIZADA EN TIEMPO REAL · RADIO RECURSIVO ({searchRadius / 1000} KM)
+        </p>
+      </header>
+
+      {/* Main Search Panel Card */}
+      <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4 shadow-xl">
+        <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
+          <span className="font-mono text-[9px] font-extrabold text-[#2ac1ff] uppercase tracking-widest">
+            CALIBRADOR DE COORDENADAS DENTRO DEL SECTOR
+          </span>
+          <p className="text-xs text-on-surface-variant">
+            Introduce tu dirección, código postal o calle para explorar proveedores mecánicos autónomos registrados de la red de carreteras de inmediato.
+          </p>
+        </div>
+
+        <form onSubmit={handleAddressSearch} className="flex flex-col sm:flex-row gap-2.5">
+          <div className="flex-1 relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
+              <MapPin className="h-4 w-4" />
+            </span>
+            <input
+              type="text"
+              required
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Ej: Calle de Alcalá, Madrid o Barcelona..."
+              className="w-full bg-black/60 border border-white/10 hover:border-white/15 focus:border-[#2ac1ff] rounded-xl pl-10 pr-4 py-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#2ac1ff]/30 font-sans transition-all"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 sm:flex-initial py-3 px-5 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 disabled:bg-white/10 disabled:text-gray-500 text-black font-semibold font-sans text-xs rounded-xl active:scale-95 transition-all cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 whitespace-nowrap"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4.5 w-4.5 animate-spin" />
+              ) : (
+                <Search className="h-4.5 w-4.5" />
+              )}
+              <span>Buscar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGeolocate}
+              disabled={isLoading}
+              title="Obtener coordenadas desde tu GPS"
+              className="py-3 px-3 w-12 bg-[#2ac1ff]/15 hover:bg-[#2ac1ff]/25 disabled:bg-white/5 disabled:text-gray-600 hover:border-[#2ac1ff]/30 border border-[#2ac1ff]/10 text-[#2ac1ff] rounded-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+            >
+              <Compass className="h-5 w-5 animate-pulse" />
+            </button>
+          </div>
+        </form>
+
+        {/* Shortcuts tag lists */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 text-[10px] font-mono">
+          <span className="text-on-surface-variant uppercase font-bold tracking-wider">Accesos rápidos:</span>
+          {[
+            { name: "Madrid", lat: 40.416775, lon: -3.703790 },
+            { name: "Barcelona", lat: 41.385064, lon: 2.173403 },
+            { name: "Valencia", lat: 39.469907, lon: -0.376288 },
+            { name: "Sevilla", lat: 37.389092, lon: -5.984459 },
+            { name: "Zaragoza", lat: 41.648823, lon: -0.889085 }
+          ].map((city) => (
+            <button
+              key={city.name}
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleQuickLoc(city.name, city.lat, city.lon)}
+              className="px-2.5 py-1 bg-white/5 hover:bg-[#2ac1ff]/10 border border-white/5 hover:border-[#2ac1ff]/20 text-on-surface-variant hover:text-white rounded-md transition-all cursor-pointer uppercase"
+            >
+              {city.name}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Grid Status Feed */}
+      {statusText && (
+        <div className="flex items-center gap-2 rounded-xl bg-orange-500/10 border border-orange-500/20 px-4 py-2.5 text-[10px] text-orange-400 font-mono">
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-400 animate-ping" />
+          <span className="uppercase">{statusText}</span>
+        </div>
+      )}
+
+      {/* Search Error Indicator */}
+      {searchError && (
+        <div className="flex items-start gap-2.5 rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-400 font-medium">
+          <AlertCircle className="h-4.5 w-4.5 text-red-500 shrink-0 mt-0.5" />
+          <span>{searchError}</span>
+        </div>
+      )}
+
+      {/* Map Satellite Coordinates Radar bar */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="glass-card p-3 rounded-xl border border-white/5 bg-[#11141a]/40 flex flex-col gap-0.5 text-left">
+          <span className="font-mono text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">NUDO DE LATITUD</span>
+          <span className="font-mono text-xs font-bold text-[#54ffb5]">
+            {latitude ? latitude.toFixed(6) : "Pendiente"}
+          </span>
+        </div>
+        <div className="glass-card p-3 rounded-xl border border-white/5 bg-[#11141a]/40 flex flex-col gap-0.5 text-left">
+          <span className="font-mono text-[8px] font-bold text-on-surface-variant uppercase tracking-widest">NUDO DE LONGITUD</span>
+          <span className="font-mono text-xs font-bold text-[#54ffb5]">
+            {longitude ? longitude.toFixed(6) : "Pendiente"}
+          </span>
+        </div>
+      </div>
+
+      {/* Display Results */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <h3 className="font-sans font-extrabold text-sm text-white uppercase tracking-tight">
+            Talleres en un radio de {searchRadius / 1000} km ({lastSearchedKeyword})
+          </h3>
+          <span className="font-mono text-[9px] bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 text-[#2ac1ff] px-2 py-0.5 rounded uppercase font-black tracking-widest">
+            {workshops.length} HALLADOS
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 select-none">
+            <Loader2 className="h-8 w-8 text-[#2ac1ff] animate-spin" />
+            <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider animate-pulse">
+              Consultando red Overpass OSM...
+            </span>
+          </div>
+        ) : workshops.length === 0 ? (
+          <div className="glass-card p-8 rounded-2xl border border-white/5 text-center space-y-2">
+            <MapPin className="h-8 w-8 text-on-surface-variant mx-auto opacity-40" />
+            <h4 className="font-sans font-bold text-sm text-white uppercase tracking-tight">Ningún taller en el perímetro</h4>
+            <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
+              No se han devuelto registros de talleres mecánicos en un radio de {searchRadius} metros de esta coordenada. Puedes intentar buscar otra localidad más poblada.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3.5">
+            {workshops.map((shop, idx) => {
+              const distanceMeters = latitude && longitude 
+                ? calculateDistance(latitude, longitude, shop.lat, shop.lon) 
+                : 0;
+
+              // Format complete address readable
+              const street = shop.tags?.["addr:street"] || "";
+              const num = shop.tags?.["addr:housenumber"] || "";
+              const pc = shop.tags?.["addr:postcode"] || "";
+              const city = shop.tags?.["addr:city"] || "";
+              const phone = shop.tags?.phone || shop.tags?.["contact:phone"] || null;
+              
+              let fullAddress = [street, num].filter(Boolean).join(" ");
+              const secondLine = [pc, city].filter(Boolean).join(" ");
+              if (secondLine && fullAddress) {
+                fullAddress += `, ${secondLine}`;
+              } else if (secondLine) {
+                fullAddress = secondLine;
+              }
+
+              // Google maps link for GPS route
+              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${shop.lat},${shop.lon}`;
+
+              return (
+                <div 
+                  key={shop.id || idx}
+                  className="group relative flex flex-col justify-between p-4 bg-[#11141a]/40 hover:bg-[#1e232d]/45 border border-white/5 hover:border-[#2ac1ff]/20 rounded-xl transition-all text-left"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 text-[#2ac1ff] rounded-lg mt-0.5 shrink-0">
+                        <Wrench className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-sans font-extrabold text-sm text-white uppercase tracking-tight group-hover:text-[#2ac1ff] transition-colors">
+                          {shop.tags?.name || "Taller de Reparación Automotriz"}
+                        </h4>
+                        
+                        <p className="text-[11px] text-gray-300">
+                          {fullAddress || "Dirección no especificada detalladamente en OSM."}
+                        </p>
+
+                        {/* Optional specs like phone / Schedule */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] font-mono text-on-surface-variant">
+                          {phone && (
+                            <span className="flex items-center gap-1 hover:text-white transition-colors">
+                              <Phone className="h-3 w-3 text-[#2ac1ff]" />
+                              <span>{phone}</span>
+                            </span>
+                          )}
+
+                          {shop.tags?.opening_hours && (
+                            <span className="flex items-center gap-1" title={shop.tags.opening_hours}>
+                              <Clock className="h-3 w-3" />
+                              <span className="truncate max-w-[180px]">{shop.tags.opening_hours}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Georeference badge and action */}
+                    <div className="flex flex-col items-end shrink-0 gap-2">
+                      <span className="font-mono text-[10px] text-[#54ffb5] bg-[#54ffb5]/10 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                        A {distanceMeters < 1000 
+                          ? `${Math.round(distanceMeters)}m` 
+                          : `${(distanceMeters / 1000).toFixed(2)} km`}
+                      </span>
+
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-1 px-2.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff] border border-[#2ac1ff]/20 group-hover:border-[#2ac1ff]/40 text-[#2ac1ff] hover:text-black text-[9px] font-mono font-bold rounded transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                      >
+                        <span>CÓMO LLEGAR</span>
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
