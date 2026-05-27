@@ -183,7 +183,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
   // Remove the inline calculateDistance from inside the component, since we moved it outside.
   
   const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
-    const overpassUrl = "/api/overpass";
+    const overpassUrl = "https://overpass-api.de/api/interpreter";
     
     // Consulta que busca talleres con cualquiera de estas etiquetas
     const query = `
@@ -199,7 +199,11 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
 
     setStatusText(`Buscando en un radio de ${(radius / 1000).toFixed(0)} km (${radius}m)...`);
 
-    const response = await fetch(`${overpassUrl}?lat=${lat}&lon=${lon}&radius=${radius}`);
+    const response = await fetch(overpassUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ data: query })
+    });
     
     if (!response.ok) {
       throw new Error("El motor Overpass API no responde. Por favor, reintenta en unos instantes.");
