@@ -26,53 +26,164 @@ export function calculateVehicleLifeline(
 ): number {
   if (!tasksList || tasksList.length === 0) return 100;
 
-  let minPercentage = 100;
+  let dangerDist = 500;
+  let warnDist = 1000;
+  try {
+    const dVal = localStorage.getItem("simva_danger_distance");
+    if (dVal) dangerDist = Number(dVal);
+    const wVal = localStorage.getItem("simva_warn_distance");
+    if (wVal) warnDist = Number(wVal);
+  } catch (e) {
+    // Ignore
+  }
+
+  let greenCount = 0;
+  let amberCount = 0;
+  let redCount = 0;
 
   tasksList.forEach((t) => {
-    let kmPct = 100;
-    let timePct = 100;
     const track = trackingList.find((tr) => tr.id === t.id);
-
-    // Mileage calculation
+    let kmRemaining = Infinity;
     if (t.cada_km > 0) {
-      let kmSince = 0;
+      let nextDueKm = 0;
       if (track && track.lastCompletedKm !== undefined) {
-        kmSince = Math.max(0, car.currentKm - track.lastCompletedKm);
+        nextDueKm = track.lastCompletedKm + t.cada_km;
       } else {
-        kmSince = car.currentKm % t.cada_km;
+        nextDueKm = Math.ceil((car.currentKm + 1) / t.cada_km) * t.cada_km;
       }
-      kmPct = Math.max(0, Math.min(100, ((t.cada_km - kmSince) / t.cada_km) * 100));
+      kmRemaining = nextDueKm - car.currentKm;
     }
 
-    // Time calculation
+    let monthsRemaining = Infinity;
     if (t.cada_meses > 0) {
-      let monthsSince = 6; // assume halfway if no log
       if (track && track.lastCompletedDate) {
         const lastDate = new Date(track.lastCompletedDate);
         const today = new Date();
         const diffYears = today.getFullYear() - lastDate.getFullYear();
         const diffMonths = today.getMonth() - lastDate.getMonth();
-        monthsSince = Math.max(0, diffYears * 12 + diffMonths);
+        const elapsedMonths = diffYears * 12 + diffMonths;
+        monthsRemaining = Math.max(0, t.cada_meses - elapsedMonths);
+      } else {
+        if (kmRemaining !== Infinity) {
+          const monthlyUsage = car.monthlyKm > 0 ? car.monthlyKm : 1000;
+          monthsRemaining = kmRemaining / monthlyUsage;
+        } else {
+          monthsRemaining = t.cada_meses;
+        }
       }
-      timePct = Math.max(0, Math.min(100, ((t.cada_meses - monthsSince) / t.cada_meses) * 100));
     }
 
-    // A task's score is the worst of its wear vectors
-    let taskPct = 100;
-    if (t.cada_km > 0 && t.cada_meses > 0) {
-      taskPct = Math.min(kmPct, timePct);
-    } else if (t.cada_km > 0) {
-      taskPct = kmPct;
-    } else if (t.cada_meses > 0) {
-      taskPct = timePct;
+    const roundedMonths = Math.max(0, Math.round(monthsRemaining));
+
+    let statusColor: "danger" | "warning" | "ok" = "ok";
+    if (t.cada_km > 0) {
+      if (kmRemaining < dangerDist) {
+        statusColor = "danger";
+      } else if (kmRemaining <= warnDist) {
+        statusColor = "warning";
+      }
+    } else {
+      if (roundedMonths <= 1) {
+        statusColor = "danger";
+      } else if (roundedMonths <= 2) {
+        statusColor = "warning";
+      }
     }
 
-    if (taskPct < minPercentage) {
-      minPercentage = taskPct;
+    if (statusColor === "danger") {
+      redCount++;
+    } else if (statusColor === "warning") {
+      amberCount++;
+    } else {
+      greenCount++;
     }
   });
 
-  return Math.round(minPercentage);
+  const total = greenCount + amberCount + redCount;
+  if (total === 0) return 100;
+
+  // Weighted score calculation: Green = 100, Amber = 50, Red = 10
+  const totalScore = (greenCount * 100 + amberCount * 50 + redCount * 10) / total;
+  return Math.round(totalScore);
+}
+
+export function getVehiclesOverallColor(
+  car: CarProfile, 
+  tasksList: MaintenanceTask[] = [], 
+  trackingList: TaskTracking[] = []
+): "danger" | "warning" | "ok" {
+  if (!tasksList || tasksList.length === 0) return "ok";
+  
+  let dangerDist = 500;
+  let warnDist = 1000;
+  try {
+    const dVal = localStorage.getItem("simva_danger_distance");
+    if (dVal) dangerDist = Number(dVal);
+    const wVal = localStorage.getItem("simva_warn_distance");
+    if (wVal) warnDist = Number(wVal);
+  } catch (e) {
+    // Ignore
+  }
+
+  let finalStatus: "danger" | "warning" | "ok" = "ok";
+
+  tasksList.forEach((task) => {
+    const track = trackingList.find((t) => t.id === task.id);
+    let kmRemaining = Infinity;
+    if (task.cada_km > 0) {
+      let nextDueKm = 0;
+      if (track && track.lastCompletedKm !== undefined) {
+        nextDueKm = track.lastCompletedKm + task.cada_km;
+      } else {
+        nextDueKm = Math.ceil((car.currentKm + 1) / task.cada_km) * task.cada_km;
+      }
+      kmRemaining = nextDueKm - car.currentKm;
+    }
+
+    let monthsRemaining = Infinity;
+    if (task.cada_meses > 0) {
+      if (track && track.lastCompletedDate) {
+        const lastDate = new Date(track.lastCompletedDate);
+        const today = new Date();
+        const diffYears = today.getFullYear() - lastDate.getFullYear();
+        const diffMonths = today.getMonth() - lastDate.getMonth();
+        const elapsedMonths = diffYears * 12 + diffMonths;
+        monthsRemaining = Math.max(0, task.cada_meses - elapsedMonths);
+      } else {
+        if (kmRemaining !== Infinity) {
+          const monthlyUsage = car.monthlyKm > 0 ? car.monthlyKm : 1000;
+          monthsRemaining = kmRemaining / monthlyUsage;
+        } else {
+          monthsRemaining = task.cada_meses;
+        }
+      }
+    }
+
+    const roundedMonths = Math.max(0, Math.round(monthsRemaining));
+
+    let statusColor: "danger" | "warning" | "ok" = "ok";
+    if (task.cada_km > 0) {
+      if (kmRemaining < dangerDist) {
+        statusColor = "danger";
+      } else if (kmRemaining <= warnDist) {
+        statusColor = "warning";
+      }
+    } else {
+      if (roundedMonths <= 1) {
+        statusColor = "danger";
+      } else if (roundedMonths <= 2) {
+        statusColor = "warning";
+      }
+    }
+
+    if (statusColor === "danger") {
+      finalStatus = "danger";
+    } else if (statusColor === "warning" && finalStatus !== "danger") {
+      finalStatus = "warning";
+    }
+  });
+
+  return finalStatus;
 }
 
 function SVGTachometer({ isMoto }: { isMoto: boolean }) {
@@ -216,6 +327,95 @@ export default function App() {
     const saved = localStorage.getItem("simva_sound_enabled");
     return saved === "true";
   });
+
+  const [fcmToken, setFcmToken] = useState<string | null>(() => {
+    return localStorage.getItem("simva_fcm_token");
+  });
+  const [fcmSupport, setFcmSupport] = useState<boolean | null>(null);
+
+  const requestPushPermissionAndRegister = async () => {
+    if (!("Notification" in window)) {
+      console.warn("Este navegador no soporta notificaciones de escritorio.");
+      setFcmSupport(false);
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.warn("Permiso de notificación denegado por el usuario.");
+        return;
+      }
+
+      // Dynamic import
+      const { getMessagingInstance, getToken } = await import("./firebase");
+      const messaging = await getMessagingInstance();
+      if (messaging) {
+        setFcmSupport(true);
+        let reg;
+        try {
+          reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+          console.log("Service Worker de FCM registrado con éxito:", reg);
+        } catch (swErr) {
+          console.warn("Fallo al registrar Service Worker (usando fallback directo):", swErr);
+        }
+
+        const token = await getToken(messaging, {
+          serviceWorkerRegistration: reg,
+          vapidKey: "BFLd-i6Hk7yIn3gL3r7U_3fK87c3Hq99Z99W67n3qR7U_6a_b_c_d_e_f_g"
+        }).catch(err => {
+          console.warn("No se pudo obtener el token de FCM. Se usará el identificador local:", err);
+          return null;
+        });
+
+        if (token) {
+          setFcmToken(token);
+          localStorage.setItem("simva_fcm_token", token);
+          console.log("FCM Token registrado con éxito:", token);
+
+          if (db && auth.currentUser) {
+            await setDoc(doc(db, "users", auth.currentUser.uid, "settings", "notifications"), {
+              fcmToken: token,
+              notiPush: true,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(err => {
+              console.warn("Error al guardar token en Firestore:", err);
+            });
+          }
+        } else {
+          let localSubId = localStorage.getItem("simva_local_sub_id");
+          if (!localSubId) {
+            localSubId = "local-sub-" + Math.random().toString(36).substring(2, 11);
+            localStorage.setItem("simva_local_sub_id", localSubId);
+          }
+          setFcmToken(localSubId);
+        }
+      } else {
+        setFcmSupport(false);
+        let localSubId = localStorage.getItem("simva_local_sub_id");
+        if (!localSubId) {
+          localSubId = "local-sub-" + Math.random().toString(36).substring(2, 11);
+          localStorage.setItem("simva_local_sub_id", localSubId);
+        }
+        setFcmToken(localSubId);
+      }
+
+      // Show welcome notification immediately
+      new Notification("SIMVA - Notificaciones Activas", {
+        body: "¡Habilitado! Mantenimientos y alertas preventivas/críticas en tiempo real.",
+        icon: "/icon_simva_logo.png"
+      });
+
+    } catch (err) {
+      console.error("Error al habilitar notificaciones push:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (notiPush && currentUser) {
+      requestPushPermissionAndRegister();
+    }
+  }, [notiPush, currentUser?.uid]);
 
   // Helper function to sync Tasks to Cloud
   const saveTasksToFirestore = async (uid: string, vehicleId: string, tasksList: MaintenanceTask[]) => {
@@ -472,8 +672,8 @@ export default function App() {
     let updatedMap = { ...sentAlerts };
     let hasUpdatedAny = false;
 
-    tasksList.forEach(async (t) => {
-      if (t.cada_km <= 0) return;
+    for (const t of tasksList) {
+      if (t.cada_km <= 0) continue;
 
       const track = trackingList.find((tr) => tr.id === t.id);
       const lastDoneKm = track?.lastCompletedKm !== undefined ? track.lastCompletedKm : 0;
@@ -500,7 +700,7 @@ export default function App() {
         hasUpdatedAny = true;
 
         try {
-          console.log(`Fiting request for send-alert-email: ${t.tarea} on ${veh.makeModel}`);
+          console.log(`Fitting request for send-alert-email: ${t.tarea} on ${veh.makeModel}`);
           await fetch("/api/send-alert-email", {
             method: "POST",
             headers: {
@@ -518,12 +718,44 @@ export default function App() {
         } catch (error) {
           console.error("Error communicating with email alert API:", error);
         }
+
+        // Real-time Push Notification trigger
+        if (notiPush && fcmToken) {
+          try {
+            const pushTitle = `⚠️ Alerta SIMVA - ${veh.makeModel}`;
+            const label = currentStatus === "danger" ? "Mantenimiento CRÍTICO" : "Mantenimiento PREVENTIVO";
+            const pushBody = `${label}: "${t.tarea}" requiere atención. Quedan ${kmRemaining <= 0 ? "0 km" : `${kmRemaining.toLocaleString("es-ES")} km`}.`;
+
+            console.log("Triggering real-time push notification request...");
+            await fetch("/api/send-push-notification", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                fcmToken,
+                title: pushTitle,
+                body: pushBody,
+              }),
+            });
+
+            // If the browser window is open and user granted permission, show an active visual alert banner
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification(pushTitle, {
+                body: pushBody,
+                icon: "/icon_simva_logo.png",
+              });
+            }
+          } catch (pushErr) {
+            console.error("Failed to send push notification:", pushErr);
+          }
+        }
       } else if (currentStatus === "ok" && lastSentStatus !== "ok") {
         // If the task status returns to OK (resolved), remove the sentinel so it can alert again on next cycle
         delete updatedMap[alertKey];
         hasUpdatedAny = true;
       }
-    });
+    }
 
     if (hasUpdatedAny) {
       localStorage.setItem(localKey, JSON.stringify(updatedMap));
@@ -1175,14 +1407,15 @@ export default function App() {
                     const vehTracking = vehiclesTrackingMap[currentVeh.id || ""] || [];
                     const lifelineScore = calculateVehicleLifeline(currentVeh, vehTasks, vehTracking);
 
+                    const overallStatusColor = getVehiclesOverallColor(currentVeh, vehTasks, vehTracking);
                     let lifelineColor = "bg-emerald-500";
                     let lifelineText = "text-emerald-400";
                     let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
-                    if (lifelineScore < 30) {
+                    if (overallStatusColor === "danger") {
                       lifelineColor = "bg-red-500";
                       lifelineText = "text-red-400 font-bold animate-pulse";
                       lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
-                    } else if (lifelineScore < 70) {
+                    } else if (overallStatusColor === "warning") {
                       lifelineColor = "bg-amber-500";
                       lifelineText = "text-amber-400";
                       lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
@@ -1311,7 +1544,7 @@ export default function App() {
                       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                         <div>
                           <h3 className="font-sans font-extrabold text-[#2ac1ff] tracking-tight text-base uppercase">Mis Vehículos Registrados</h3>
-                          <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">SELECCIONA UN VEHÍCULO PARA CONTROLAR SU PLAN Y DETALLES</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">escucha como ruge tu león</p>
                         </div>
                         <button
                           onClick={() => {
@@ -1337,14 +1570,15 @@ export default function App() {
                             const vehTracking = vehiclesTrackingMap[veh.id || ""] || [];
                             const lifelineScore = calculateVehicleLifeline(veh, vehTasks, vehTracking);
 
+                            const overallStatusColor = getVehiclesOverallColor(veh, vehTasks, vehTracking);
                             let lifelineColor = "bg-emerald-500";
                             let lifelineText = "text-emerald-400";
                             let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
-                            if (lifelineScore < 30) {
+                            if (overallStatusColor === "danger") {
                               lifelineColor = "bg-red-500";
                               lifelineText = "text-red-400 font-bold animate-pulse";
                               lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
-                            } else if (lifelineScore < 70) {
+                            } else if (overallStatusColor === "warning") {
                               lifelineColor = "bg-amber-500";
                               lifelineText = "text-amber-400";
                               lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
@@ -1444,94 +1678,48 @@ export default function App() {
               {activeScreen === "perfil" && (
                 <div className="animate-fade-in space-y-6 text-left">
                   {/* Profile Header */}
-                  <header className="mb-2">
-                    <h2 className="font-sans text-2xl font-bold text-white tracking-tight mb-1">
-                      Perfil de Telemetría
-                    </h2>
-                    <p className="text-xs text-on-surface-variant font-medium">
-                      Información de tu nodo SIMVA y herramientas de calibración del sistema.
-                    </p>
-                  </header>
-
-                  {/* Driver Card */}
-                  <section className="glass-card p-5 rounded-2xl border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden shadow-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 shrink-0 rounded-full bg-primary-fixed-dim/20 border border-primary-fixed-dim/40 flex items-center justify-center text-primary-fixed-dim font-bold text-base shadow-[0_0_15px_rgba(0,221,221,0.2)]">
-                        {currentUser.email ? currentUser.email[0].toUpperCase() : "U"}
-                      </div>
-                      <div>
-                        <h3 className="text-white font-sans font-bold text-sm">Operador Principal</h3>
-                        <p className="font-mono text-[9px] text-primary-fixed-dim uppercase tracking-wider">
-                          {currentUser.email}
-                        </p>
-                        <p className="text-[11px] text-on-surface-variant mt-0.5">
-                          ID: {currentUser.uid.slice(0, 12)}... · SIMVA Conectado
-                        </p>
-                      </div>
+                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <div>
+                      <h2 className="font-sans text-2xl font-black text-white tracking-tight uppercase leading-none">
+                        {currentUser.displayName || currentUser.email?.split("@")[0] || "Operador Principal"}
+                      </h2>
+                      <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-wider mt-1">
+                        {currentUser.email}
+                      </p>
                     </div>
                     
                     <button
                       onClick={() => signOut(auth)}
                       type="button"
-                      className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-200 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center justify-center gap-1.5 self-start sm:self-center"
+                      className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
                     >
-                      <LogOut className="h-3.5 w-3.5" />
+                      <LogOut className="h-3.5 w-3.5 text-red-400" />
                       <span>Cerrar Sesión</span>
                     </button>
+                  </div>
 
-                    <div className="absolute top-4 right-4 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5 text-[9px] font-mono text-emerald-400 font-bold hidden sm:block">
-                      SISTEMA_OK
-                    </div>
-                  </section>
-
-                  {/* Stats Grid */}
-                  <section className="grid grid-cols-3 gap-3">
-                    <div className="glass-card p-3 rounded-xl border border-white/10 flex flex-col gap-1">
-                      <span className="font-mono text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">ODÓMETRO</span>
-                      <span className="font-mono text-xs font-bold text-white truncate">
-                        {carProfile ? `${carProfile.currentKm.toLocaleString("es-ES")} km` : "--"}
-                      </span>
-                    </div>
-                    
-                    <div className="glass-card p-3 rounded-xl border border-white/10 flex flex-col gap-1">
-                      <span className="font-mono text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">PLAN RECOM</span>
-                      <span className="font-mono text-xs font-bold text-white truncate">
-                        {tasks.length} Tareas
-                      </span>
-                    </div>
-
-                    <div className="glass-card p-3 rounded-xl border border-white/10 flex flex-col gap-1">
-                      <span className="font-mono text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">HISTORIAL</span>
-                      <span className="font-mono text-xs font-bold text-white truncate">
-                        {tracking.length} Logs
-                      </span>
-                    </div>
-                  </section>
-
-                  {/* Quick Odometer Calibration */}
+                  {/* Manual Calibration */}
                   {carProfile && (
-                    <section className="glass-card p-4 rounded-xl border border-white/10 space-y-3.5">
+                    <section className="glass-card p-4 rounded-xl border border-white/5 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Gauge className="h-4 w-4 text-primary-fixed-dim" />
-                        <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                          Calibración Manual de Telemetría
+                        <Gauge className="h-3.5 w-3.5 text-[#2ac1ff]" />
+                        <span className="font-mono text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">
+                          Calibrar Odómetro
                         </span>
                       </div>
-
                       <form onSubmit={handleUpdateOdometer} className="flex gap-2.5 items-end">
-                        <div className="flex-1 flex flex-col gap-1">
-                           <label className="font-mono text-[9px] font-bold text-on-surface-variant">KILÓMETROS DEL SENSOR</label>
+                        <div className="flex-1">
                           <input
                             type="number"
                             min={0}
                             value={newOdo}
                             onChange={(e) => setNewOdo(e.target.value)}
-                            className="w-full bg-black border border-outline-variant rounded-lg p-2.5 text-xs text-white font-mono focus:border-primary-fixed-dim"
+                            className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-primary-fixed-dim"
                           />
                         </div>
                         <button
                           type="submit"
-                          className="py-2.5 px-4 bg-primary-fixed-dim text-black font-semibold font-mono text-[11px] rounded-lg hover:bg-white active:scale-95 transition-all cursor-pointer h-[38px] uppercase tracking-wider shrink-0"
+                          className="py-2 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-bold font-mono text-[10px] rounded-lg transition-all cursor-pointer h-[32px] uppercase tracking-wider"
                         >
                           Calibrar
                         </button>
@@ -1539,26 +1727,29 @@ export default function App() {
                     </section>
                   )}
 
-                  {/* SIMVA Alerts Preferences */}
-                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4">
+                  {/* AJUSTES Section */}
+                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-5">
                     <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
                       <Sliders className="h-4.5 w-4.5 text-[#2ac1ff]" />
-                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">PREFERENCIAS DEL ASISTENTE SIMVA</h4>
+                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">AJUSTES</h4>
                     </div>
 
-                    {/* Toggle rows */}
-                    <div className="space-y-3.5">
+                    {/* Notification Switch */}
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
                           <label className="text-xs font-semibold text-white block">Notificaciones de Mantenimiento</label>
-                          <span className="text-[10px] text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos.</span>
+                          <span className="text-[10px] text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos por correo y push.</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             const nextVal = !notiPush;
                             setNotiPush(nextVal);
                             localStorage.setItem("simva_noti_push", String(nextVal));
+                            if (nextVal) {
+                              await requestPushPermissionAndRegister();
+                            }
                           }}
                           className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${notiPush ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
                         >
@@ -1566,106 +1757,105 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-xs font-semibold text-white block">Avisos Acústicos Críticos</label>
-                          <span className="text-[10px] text-on-surface-variant font-medium">Bip de advertencia al iniciar cuando hay tareas expiradas rojas.</span>
+                      {notiPush && (
+                        <div className="bg-black/50 border border-white/5 rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-[9px] text-[#2ac1ff] uppercase">Estado de Push Web:</span>
+                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${fcmToken ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                              {fcmToken ? 'Canal Conectado' : 'Pendiente Permiso'}
+                            </span>
+                          </div>
+                          
+                          {fcmToken ? (
+                            <div className="space-y-1">
+                              <span className="font-mono text-[8px] text-gray-400 uppercase block select-none">Token de Registro del Dispositivo:</span>
+                              <div className="font-mono text-[8px] bg-black/80 px-2 py-1.5 rounded text-[#2ac1ff] break-all border border-white/5 select-all">
+                                {fcmToken}
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={requestPushPermissionAndRegister}
+                              className="w-full py-1.5 px-2.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-mono text-[9px] font-bold rounded transition-all uppercase tracking-wider"
+                            >
+                              Conceder Permiso para Notificaciones Push
+                            </button>
+                          )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextVal = !soundEnabled;
-                            setSoundEnabled(nextVal);
-                            localStorage.setItem("simva_sound_enabled", String(nextVal));
-                          }}
-                          className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${soundEnabled ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
-                        >
-                          <div className={`w-5 h-5 rounded-full bg-black transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  </section>
 
-                  {/* Calibration Thresholds */}
-                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4">
-                    <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
-                      <Bell className="h-4.5 w-4.5 text-[#2ac1ff]" />
-                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">INTERVALOS DE ALERTA DE KILOMETRAJE</h4>
-                    </div>
-                    <p className="text-[10.5px] text-on-surface-variant">
-                      Personaliza cuántos kilómetros antes de que expire la tarea de mantenimiento se activará el aviso en sistema.
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5 text-left">
-                        <label className="font-mono text-[9px] font-bold text-on-surface-variant text-amber-400 block uppercase">NOTIFICACIÓN AMBAR (PREVENTIVA)</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min="1"
-                            max="10000"
-                            value={warnDistance}
-                            onChange={(e) => {
-                              const v = Math.max(1, Number(e.target.value));
-                              setWarnDistance(v);
-                              localStorage.setItem("simva_warn_distance", String(v));
-                            }}
-                            className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
-                          />
-                          <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 text-left">
-                        <label className="font-mono text-[9px] font-bold text-on-surface-variant text-red-400 block uppercase">AVISO ROJO (URGENTE)</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min="1"
-                            max="10000"
-                            value={dangerDistance}
-                            onChange={(e) => {
-                              const v = Math.max(1, Number(e.target.value));
-                              setDangerDistance(v);
-                              localStorage.setItem("simva_danger_distance", String(v));
-                            }}
-                            className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
-                          />
-                          <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Reset zone */}
-                  <section className="glass-card p-4 rounded-xl border border-red-500/15 bg-red-500/5 space-y-4">
-                    <div className="space-y-0.5">
-                      <h4 className="text-red-400 font-sans font-bold text-xs uppercase tracking-wider">Zona de Peligro</h4>
-                      <p className="text-[11px] text-on-surface-variant font-sans">
-                        Acciones avanzadas de gestión de registros e identidad de cuenta.
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1 bg-black/25 border border-white/5 p-3 rounded-lg space-y-2">
-                        <p className="text-[10.5px] font-sans text-gray-300">
-                          Restablece tu dispositivo borrando el coche actual y las tareas cargadas en sistema de forma local y remota.
+                    {/* Calibration Thresholds */}
+                    <div className="space-y-3.5 border-t border-white/5 pt-4">
+                      <div>
+                        <span className="font-sans font-bold text-[11px] text-[#2ac1ff] uppercase tracking-wide block mb-1">Intervalos de Alerta de Kilometraje</span>
+                        <p className="text-[10px] text-on-surface-variant leading-normal">
+                          Configura cuántos kilómetros antes de la expiración se activará el aviso en sistema.
                         </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 text-left">
+                          <label className="font-mono text-[9px] font-bold text-amber-400 block uppercase">Notificación Ámbar</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="1"
+                              max="10000"
+                              value={warnDistance}
+                              onChange={(e) => {
+                                const v = Math.max(1, Number(e.target.value));
+                                setWarnDistance(v);
+                                localStorage.setItem("simva_warn_distance", String(v));
+                              }}
+                              className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                            />
+                            <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-left">
+                          <label className="font-mono text-[9px] font-bold text-red-400 block uppercase">Aviso Rojo</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="1"
+                              max="10000"
+                              value={dangerDistance}
+                              onChange={(e) => {
+                                const v = Math.max(1, Number(e.target.value));
+                                setDangerDistance(v);
+                                localStorage.setItem("simva_danger_distance", String(v));
+                              }}
+                              className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                            />
+                            <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Minimal Danger Zone */}
+                  <section className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <h4 className="text-red-400 font-sans font-bold text-xs uppercase tracking-wider">Zona de Peligro</h4>
+                        <p className="text-[10px] text-on-surface-variant font-sans">
+                          Gestión avanzada de registros e identidad.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
                         <button
                           onClick={handleResetAll}
-                          className="py-2.5 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-200 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-200 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                         >
                           Limpiar Datos
                         </button>
-                      </div>
-
-                      <div className="flex-1 bg-black/25 border border-white/5 p-3 rounded-lg space-y-2">
-                        <p className="text-[10.5px] font-sans text-gray-300">
-                          Elimina tu perfil SIMVA y borra todos tus datos asociados definitivamente del sistema y tu cuenta.
-                        </p>
                         <button
                           onClick={handleDeleteAccount}
-                          className="py-2.5 px-3 bg-red-600/25 hover:bg-red-600/40 border border-red-500/20 text-red-100 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          className="py-1.5 px-3 bg-red-600/15 hover:bg-red-600/25 border border-red-500/20 text-red-100 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                         >
                           Eliminar Cuenta
                         </button>

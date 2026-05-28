@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBaZxRzJXTYKcAM_Mt09Ga5l2Dji5hAlcQ",
@@ -15,6 +16,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Safe export of messaging instance
+export const getMessagingInstance = async () => {
+  try {
+    const supported = await isSupported();
+    if (supported) {
+      return getMessaging(app);
+    }
+  } catch (err) {
+    console.warn("FCM is not supported in this environment:", err);
+  }
+  return null;
+};
+
+export { getToken, onMessage, isSupported };
+
 
 // Operational types for precise debugging
 export enum OperationType {

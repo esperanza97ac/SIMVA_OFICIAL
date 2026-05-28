@@ -61,7 +61,9 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
       setVehicleType(currentProfile.vehicleType || "Coche");
       setVin(currentProfile.vin || "");
       // Split brand and model if saved as joined makeModel
-      const parts = currentProfile.makeModel.split(" ");
+      const parts = currentProfile.makeModel.includes("-")
+        ? currentProfile.makeModel.split("-")
+        : currentProfile.makeModel.split(" ");
       if (parts.length > 0) {
         const firstWord = parts[0];
         const rest = parts.slice(1).join(" ");
@@ -100,7 +102,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
     if (!brand.trim()) return;
 
     const fullMakeModel = model.trim() 
-      ? `${brand.trim()} ${model.trim()}`
+      ? `${brand.trim()}-${model.trim()}`
       : brand.trim();
 
     const finalKm = Number(currentKm) || 0;

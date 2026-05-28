@@ -4,9 +4,28 @@ import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
+import admin from "firebase-admin";
 
 // Load environment variables
 dotenv.config();
+
+// Initialize Firebase Admin dynamically to avoid requiring credentials files on startup
+let messagingModule: any = null;
+try {
+  if (process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    admin.initializeApp();
+    messagingModule = admin.messaging();
+    console.log("[FIREBASE-ADMIN] Inicializado correctamente para notificaciones push.");
+  } else if (process.env.FIREBASE_PROJECT_ID) {
+    admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+    });
+    messagingModule = admin.messaging();
+    console.log("[FIREBASE-ADMIN] Inicializado con projectId.");
+  }
+} catch (adminErr) {
+  console.warn("FCM Server Admin SDK initialisation skipped/limited (simulation fallback enabled):", adminErr);
+}
 
 const app = express();
 const PORT = 3000;
@@ -137,6 +156,50 @@ app.post("/api/send-alert-email", async (req, res) => {
     success: true,
     method: "simulation",
     message: `Alerta Simulada: Correo enviado a ${userEmail} (Vehículo: ${vehicleName}, Tarea: ${taskName}, KMs: ${kmRemaining}). Configura el archivo .env.example para correo SMTP real.`
+  });
+});
+
+// API endpoint to send maintenance push notifications
+app.post("/api/send-push-notification", async (req, res) => {
+  const { fcmToken, title, body } = req.body;
+
+  if (!fcmToken || !title || !body) {
+    return res.status(400).json({ error: "Faltan datos obligatorios (fcmToken, title, body)" });
+  }
+
+  // Beautiful simulation terminal output
+  console.log("\n" + "=".repeat(60));
+  console.log(`📱 [SIMVA NOTIFICACIÓN PUSH ENVIADA]`);
+  console.log(`Token:      ${fcmToken}`);
+  console.log(`Título:     ${title}`);
+  console.log(`Mensaje:    ${body}`);
+  console.log("=".repeat(60) + "\n");
+
+  if (messagingModule) {
+    try {
+      const message = {
+        notification: {
+          title,
+          body,
+        },
+        token: fcmToken,
+      };
+      const response = await messagingModule.send(message);
+      return res.json({
+        success: true,
+        method: "fcm",
+        messageId: response,
+        message: "Notificación Push enviada satisfactoriamente con FCM admin."
+      });
+    } catch (err: any) {
+      console.error("[FCM SERVER ERROR] Failed to send via FCM:", err.message);
+    }
+  }
+
+  return res.json({
+    success: true,
+    method: "simulation",
+    message: `Notificación Push Simulada enviada al token: ${fcmToken.slice(0, 20)}...`
   });
 });
 
