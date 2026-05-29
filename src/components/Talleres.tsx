@@ -347,28 +347,32 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
 
     try {
       let results: any[] = [];
-      try {
-        // En Vercel o IA Studio, llamamos directamente al endpoint oficial de Nominatim con filtro de España
-        const queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=es`;
-        const geocodeResp = await fetch(queryUrl, {
-          headers: {
-            "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
-            "Accept-Language": "es"
+      
+      // Intentar buscar directamente en servidores Nominatim públicos para evitar errores 404 de proxy en Vercel
+      const publicUrls = [
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=es`,
+        `https://nominatim.openstreetmap.fr/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=es`,
+        `https://nominatim.qgis.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=es`
+      ];
+
+      for (const url of publicUrls) {
+        try {
+          console.log(`Intentando geolocalizar con: ${url}`);
+          const geocodeResp = await fetch(url, {
+            headers: {
+              "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
+              "Accept-Language": "es"
+            }
+          });
+          if (geocodeResp.ok) {
+            const data = await geocodeResp.json();
+            if (data && data.length > 0) {
+              results = data;
+              break; // Encontrado correctamente, detenemos la búsqueda
+            }
           }
-        });
-        
-        if (geocodeResp.ok) {
-          results = await geocodeResp.json();
-        } else {
-          throw new Error("Error en la respuesta directa de Nominatim");
-        }
-      } catch (directError) {
-        console.warn("Fallo en la geocodificación directa. Intentando llamada mediante proxy local del servidor...", directError);
-        const geocodeResp = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
-        if (geocodeResp.ok) {
-          results = await geocodeResp.json();
-        } else {
-          throw new Error("No se pudo conectar con el servidor de geocodificación.");
+        } catch (singleErr) {
+          console.warn(`Fallo geolocalización directa con ${url}:`, singleErr);
         }
       }
 
