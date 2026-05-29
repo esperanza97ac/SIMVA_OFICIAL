@@ -216,51 +216,30 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     let data: any = null;
     let fallbackUsed = false;
 
-    // First attempt: try to query via our backend server-side proxy to avoid rate-limits and CORS
-    try {
-      console.log(`[SIMVA-DEBUG] Solicitando talleres vía proxy de backend /api/overpass...`);
-      const proxyResp = await fetch("/api/overpass", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query })
-      });
-      if (proxyResp.ok) {
-        data = await proxyResp.json();
-        console.log("[SIMVA-DEBUG] CONEXIÓN CON ÉXITO: Datos de Overpass obtenidos a través de proxy del backend.");
-      } else {
-        console.warn(`[SIMVA-DEBUG] El proxy Overpass retornó estado ${proxyResp.status}`);
-      }
-    } catch (proxyErr) {
-      console.warn("[SIMVA-DEBUG] Falló el proxy de Overpass, intentando llamadas directas desde navegador...", proxyErr);
-    }
+    // Query available Overpass mirrors directly using GET with data parameters to be compatible on Vercel
+    for (const url of overpassUrls) {
+      try {
+        console.log(`[SIMVA-DEBUG] Intentando conectar con servidor Overpass directo: ${url}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7500); // 7.5s timeout per server to keep it responsive
 
-    // Direct browser fallback if proxy failed or wasn't available
-    if (!data) {
-      // Iterate through available mirrors to fetch the workshops
-      for (const url of overpassUrls) {
-        try {
-          console.log(`[SIMVA-DEBUG] Intentando conectar con servidor Overpass directo: ${url}`);
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout per server to keep it responsive
+        const targetUrl = `${url}?data=${encodeURIComponent(query)}`;
+        const response = await fetch(targetUrl, {
+          method: "GET",
+          signal: controller.signal
+        });
 
-          const targetUrl = `${url}?data=${encodeURIComponent(query)}`;
-          const response = await fetch(targetUrl, {
-            method: "GET",
-            signal: controller.signal
-          });
+        clearTimeout(timeoutId);
 
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            data = await response.json();
-            console.log(`[SIMVA-DEBUG] CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
-            break; // successfully fetched data, exit the loop
-          } else {
-            console.warn(`[SIMVA-DEBUG] Servidor Overpass ${url} retornó estado ${response.status}`);
-          }
-        } catch (err) {
-          console.warn(`[SIMVA-DEBUG] Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
+        if (response.ok) {
+          data = await response.json();
+          console.log(`[SIMVA-DEBUG] CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
+          break; // successfully fetched data, exit the loop
+        } else {
+          console.warn(`[SIMVA-DEBUG] Servidor Overpass ${url} retornó estado ${response.status}`);
         }
+      } catch (err) {
+        console.warn(`[SIMVA-DEBUG] Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
       }
     }
     
