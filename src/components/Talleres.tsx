@@ -201,9 +201,9 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     const query = `
       [out:json][timeout:15];
       (
+        node["amenity"="car_repair"](around:${radius},${lat},${lon});
+        way["amenity"="car_repair"](around:${radius},${lat},${lon});
         node["shop"="car_repair"](around:${radius},${lat},${lon});
-        node["amenity"="vehicle_repair"](around:${radius},${lat},${lon});
-        node["service:vehicle:repair"="yes"](around:${radius},${lat},${lon});
         way["shop"="car_repair"](around:${radius},${lat},${lon});
       );
       out body;
@@ -469,10 +469,8 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
       <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-4 shadow-xl">
         <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
           <span className="font-mono text-[9px] font-extrabold text-[#2ac1ff] uppercase tracking-widest">
+            BÚSQUEDA DE TALLERES EN ESPAÑA
           </span>
-          <p className="text-xs text-on-surface-variant">
-            Introduce tu dirección, código postal o calle para explorar proveedores mecánicos autónomos registrados de la red de carreteras de inmediato.
-          </p>
         </div>
 
         <form onSubmit={handleAddressSearch} className="flex flex-col sm:flex-row gap-2.5">
@@ -485,7 +483,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
               required
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Ej: Calle de Alcalá, Madrid o Barcelona..."
+              placeholder="Ej: Calle de Alcalá 45, Madrid o Gran Vía, Barcelona..."
               className="w-full bg-black/60 border border-white/10 hover:border-white/15 focus:border-[#2ac1ff] rounded-xl pl-10 pr-4 py-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#2ac1ff]/30 font-sans transition-all"
             />
           </div>
