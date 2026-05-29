@@ -54,7 +54,7 @@ function getAiClient() {
 
 // API endpoint to send maintenance alert emails
 app.post("/api/send-alert-email", async (req, res) => {
-  const { userEmail, vehicleName, taskName, status, kmRemaining, currentKm } = req.body;
+  const { userEmail, vehicleName, vehicleType, taskName, status, kmRemaining, currentKm } = req.body;
 
   if (!userEmail || !vehicleName || !taskName || !status) {
     return res.status(450).json({ error: "Faltan datos obligatorios para enviar el aviso por email" });
@@ -63,6 +63,7 @@ app.post("/api/send-alert-email", async (req, res) => {
   const isDanger = status === "danger";
   const statusLabel = isDanger ? "CRÍTICO (ROJO)" : "PREVENTIVO (ÁMBAR)";
   const statusColorHex = isDanger ? "#ef4444" : "#f59e0b";
+  const vehTypeLabel = (vehicleType || "vehículo").toLowerCase();
 
   const emailHtml = `
     <div style="background-color: #0b0f19; color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
@@ -76,16 +77,24 @@ app.post("/api/send-alert-email", async (req, res) => {
           NIVEL DE AVISO: ${statusLabel}
         </h3>
         <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #cbd5e1;">
-          La pieza o servicio de mantenimiento <strong>"${taskName}"</strong> ha alcanzado el límite de advertencia establecido para tu vehículo.
+          ¡Atención! En tu <strong>${vehTypeLabel} ${vehicleName}</strong>, se ha detectado el siguiente aviso de mantenimiento pendiente debido a desgaste o vencimiento: <strong>"${taskName}"</strong>.
         </p>
       </div>
 
       <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
-        <h4 style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">Detalles del Vehículo</h4>
+        <h4 style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">Detalles del Vehículo y Alerta</h4>
         <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
           <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">Vehículo:</td>
+            <td style="color: #94a3b8; padding: 4px 0;">Tipo de Vehículo:</td>
+            <td style="color: #ffffff; font-weight: bold; text-align: right; padding: 4px 0; text-transform: capitalize;">${vehTypeLabel}</td>
+          </tr>
+          <tr>
+            <td style="color: #94a3b8; padding: 4px 0;">Modelo de Vehículo:</td>
             <td style="color: #ffffff; font-weight: bold; text-align: right; padding: 4px 0;">${vehicleName}</td>
+          </tr>
+          <tr>
+            <td style="color: #94a3b8; padding: 4px 0;">Pieza / Filtro / Componente:</td>
+            <td style="color: #e2e8f0; font-weight: bold; text-align: right; padding: 4px 0; color: #fed7aa;">${taskName}</td>
           </tr>
           <tr>
             <td style="color: #94a3b8; padding: 4px 0;">Kilometraje Actual:</td>
@@ -101,12 +110,12 @@ app.post("/api/send-alert-email", async (req, res) => {
       </div>
 
       <div style="text-align: center;">
-        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">Por favor, programa una cita con tu taller de confianza lo antes posible.</p>
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">Por favor, programa una cita con tu taller de confianza lo antes posible para revisar tu <strong>${taskName}</strong>.</p>
       </div>
 
       <div style="border-top: 1px solid #1e293b; margin-top: 30px; padding-top: 15px; text-align: center; font-size: 11px; color: #64748b;">
         Este es un correo automático provisto por el Módulo de IA y Telemetría de SIMVA.<br>
-        Recibes este aviso porque has configurado notificaciones automáticas en tu dispositivo.
+        Recibes este aviso porque has configurado notificaciones automáticas para tu ${vehTypeLabel} ${vehicleName}.
       </div>
     </div>
   `;
@@ -115,6 +124,8 @@ app.post("/api/send-alert-email", async (req, res) => {
   const smtpPort = Number(process.env.SMTP_PORT || 587);
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
+
+  const emailSubject = `⚠️ ALERTA SIMVA [${statusLabel}] - ${vehTypeLabel === "coche" ? "🚗 Coche" : "🏍️ Moto"} ${vehicleName}: requiere cambio de ${taskName}`;
 
   if (smtpHost && smtpUser && smtpPass) {
     try {
@@ -131,7 +142,7 @@ app.post("/api/send-alert-email", async (req, res) => {
       await transporter.sendMail({
         from: process.env.EMAILS_FROM || '"SIMVA Alertas" <alerts@simva.com>',
         to: userEmail,
-        subject: `⚠️ ALERTA SIMVA [${statusLabel}] - ${vehicleName}: ${taskName}`,
+        subject: emailSubject,
         html: emailHtml,
       });
 
@@ -146,8 +157,8 @@ app.post("/api/send-alert-email", async (req, res) => {
   console.log("\n" + "=".repeat(60));
   console.log(`📧 [SIMVA ALERTA DE CORREO ELECTRONICO SIMULADO]`);
   console.log(`Para:       ${userEmail}`);
-  console.log(`Asunto:     ⚠️ ALERTA SIMVA [${statusLabel}] - ${vehicleName}: ${taskName}`);
-  console.log(`Vehículo:   ${vehicleName}`);
+  console.log(`Asunto:     ${emailSubject}`);
+  console.log(`Vehículo:   ${vehTypeLabel === "coche" ? "🚗 Coche" : "🏍️ Moto"} ${vehicleName}`);
   console.log(`Pieza:      ${taskName}`);
   console.log(`Detalle:    Restan ${kmRemaining} KMs (Lector total: ${currentKm} KMs)`);
   console.log("=".repeat(60) + "\n");
@@ -200,6 +211,85 @@ app.post("/api/send-push-notification", async (req, res) => {
     success: true,
     method: "simulation",
     message: `Notificación Push Simulada enviada al token: ${fcmToken.slice(0, 20)}...`
+  });
+});
+
+// API Proxy endpoints for OpenStreetMap Map and Geocoding lookup to bypass Vercel Blocks/Rate Limits
+app.get("/api/geocode", async (req, res) => {
+  const q = req.query.q;
+  if (!q) {
+    return res.status(400).json({ error: "Missing address query parameter 'q'" });
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(String(q))}&limit=1`,
+      {
+        headers: {
+          "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
+          "Accept-Language": "es"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Nominatim respondió con código de estado: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return res.json(data);
+  } catch (error: any) {
+    console.error("[GEOCODE PROXY ERROR] Fallo al geocodificar mediante Nominatim:", error);
+    return res.status(500).json({ error: error.message || "Fallo en la resolución geográfica." });
+  }
+});
+
+app.post("/api/overpass", async (req, res) => {
+  const { query } = req.body;
+  if (!query) {
+    return res.status(400).json({ error: "Missing overpass query text" });
+  }
+
+  const overpassUrls = [
+    "https://overpass-api.de/api/interpreter",
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://z.overpass-api.de/api/interpreter",
+    "https://overpass.osm.ch/api/interpreter"
+  ];
+
+  let lastError = null;
+  for (const url of overpassUrls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s timeout
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)"
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        return res.json(data);
+      } else {
+        console.warn(`[OVERPASS SERVER PROXY] Servidor ${url} retornó un error: ${response.status}`);
+      }
+    } catch (err: any) {
+      console.warn(`[OVERPASS SERVER PROXY] Expiró o falló la conexión con ${url}:`, err.message);
+      lastError = err;
+    }
+  }
+
+  return res.status(502).json({
+    error: "Todos los servidores Overpass OSM fallaron o expiraron temporariamente.",
+    detail: lastError?.message
   });
 });
 

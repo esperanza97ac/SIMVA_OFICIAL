@@ -709,6 +709,7 @@ export default function App() {
             body: JSON.stringify({
               userEmail: currentUser.email,
               vehicleName: veh.makeModel,
+              vehicleType: veh.vehicleType,
               taskName: t.tarea,
               status: currentStatus,
               kmRemaining,
@@ -722,9 +723,10 @@ export default function App() {
         // Real-time Push Notification trigger
         if (notiPush && fcmToken) {
           try {
-            const pushTitle = `⚠️ Alerta SIMVA - ${veh.makeModel}`;
-            const label = currentStatus === "danger" ? "Mantenimiento CRÍTICO" : "Mantenimiento PREVENTIVO";
-            const pushBody = `${label}: "${t.tarea}" requiere atención. Quedan ${kmRemaining <= 0 ? "0 km" : `${kmRemaining.toLocaleString("es-ES")} km`}.`;
+            const vehTypeLabel = (veh.vehicleType || "vehículo").toLowerCase();
+            const pushTitle = `⚠️ Alerta SIMVA: ${vehTypeLabel === "coche" ? "🚗 Coche" : vehTypeLabel === "moto" ? "🏍️ Moto" : "Vehículo"} ${veh.makeModel}`;
+            const label = currentStatus === "danger" ? "VENCIDO/CRÍTICO" : "PRÓXIMO RECAMBIO";
+            const pushBody = `¡Atención! En tu ${vehTypeLabel} ${veh.makeModel}, está fallando o requiere atención: "${t.tarea}". Quedan ${kmRemaining <= 0 ? "0 km" : `${kmRemaining.toLocaleString("es-ES")} km`}.`;
 
             console.log("Triggering real-time push notification request...");
             await fetch("/api/send-push-notification", {

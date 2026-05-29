@@ -209,31 +209,52 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     let data: any = null;
     let fallbackUsed = false;
 
-    // Iterate through available mirrors to fetch the workshops
-    for (const url of overpassUrls) {
-      try {
-        console.log(`Intentando conectar con servidor Overpass: ${url}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout per server to keep it responsive
+    // First attempt: try to query via our backend server-side proxy to avoid rate-limits and CORS
+    try {
+      console.log("Intentando conectar con el proxy Overpass local...");
+      const proxyResp = await fetch("/api/overpass", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+      if (proxyResp.ok) {
+        data = await proxyResp.json();
+        console.log("CONEXIÓN CON ÉXITO: Datos de Overpass obtenidos a través de proxy del backend.");
+      } else {
+        console.warn(`El proxy Overpass retornó estado ${proxyResp.status}`);
+      }
+    } catch (proxyErr) {
+      console.warn("Fallo el proxy de Overpass, intentando llamadas directas desde navegador...", proxyErr);
+    }
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ data: query }),
-          signal: controller.signal
-        });
+    // Direct browser fallback if proxy failed or wasn't available
+    if (!data) {
+      // Iterate through available mirrors to fetch the workshops
+      for (const url of overpassUrls) {
+        try {
+          console.log(`Intentando conectar con servidor Overpass directo: ${url}`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout per server to keep it responsive
 
-        clearTimeout(timeoutId);
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ data: query }),
+            signal: controller.signal
+          });
 
-        if (response.ok) {
-          data = await response.json();
-          console.log(`CONEXIÓN CON ÉXITO: Overpass API usando ${url}`);
-          break; // successfully fetched data, exit the loop
-        } else {
-          console.warn(`Servidor Overpass ${url} retornó estado ${response.status}`);
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            data = await response.json();
+            console.log(`CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
+            break; // successfully fetched data, exit the loop
+          } else {
+            console.warn(`Servidor Overpass ${url} retornó estado ${response.status}`);
+          }
+        } catch (err) {
+          console.warn(`Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
         }
-      } catch (err) {
-        console.warn(`Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
       }
     }
     
@@ -330,16 +351,28 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     setStatusText("Buscando coordenadas de la dirección...");
 
     try {
-      // Free open Nominatim geocoding endpoint
-      const geocodeResp = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-      );
-      
-      if (!geocodeResp.ok) {
-        throw new Error("No se pudo conectar con el servidor de geocodificación.");
+      let results: any[] = [];
+      try {
+        // Try to fetch via our backend proxy first to avoid Nominatim Vercel / referer blocking
+        const geocodeResp = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
+        if (geocodeResp.ok) {
+          results = await geocodeResp.json();
+        } else {
+          throw new Error("Proxy geocode returned error");
+        }
+      } catch (proxyError) {
+        console.warn("Fallo en el proxy local de geocodificación. Intentando llamada directa identificada a Nominatim...", proxyError);
+        // Free open Nominatim geocoding endpoint as a clean identified fallback
+        const geocodeResp = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&email=espe.freelancer@gmail.com`
+        );
+        if (geocodeResp.ok) {
+          results = await geocodeResp.json();
+        } else {
+          throw new Error("No se pudo conectar con el servidor de geocodificación.");
+        }
       }
 
-      const results = await geocodeResp.json();
       if (results && results.length > 0) {
         const targetLat = parseFloat(results[0].lat);
         const targetLon = parseFloat(results[0].lon);
