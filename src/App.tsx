@@ -1569,7 +1569,7 @@ export default function App() {
                       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                         <div>
                           <h3 className="font-sans font-extrabold text-[#2ac1ff] tracking-tight text-base uppercase">Mis Vehículos Registrados</h3>
-                          <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">escucha como ruge tu león</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">se siempre el rey de la carretera</p>
                         </div>
                         <button
                           onClick={() => {

@@ -183,113 +183,143 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
   // Remove the inline calculateDistance from inside the component, since we moved it outside.
   
   const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
-    console.log(`[SIMVA-DEBUG] findCarRepairs invocado con: latitud = ${lat}, longitud = ${lon}, radio de búsqueda = ${radius}m`);
+    console.log(`[SIMVA-DEBUG] findCarRepairs con Nominatim: latitud = ${lat}, longitud = ${lon}, radio = ${radius}m`);
     if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-      console.error("[SIMVA-DEBUG] Se han proporcionado coordenadas inválidas o indefinidas a findCarRepairs!", { lat, lon });
+      console.error("[SIMVA-DEBUG] Coordenadas inválidas en findCarRepairs!", { lat, lon });
       return [];
     }
 
-    // List of reliable public Overpass API mirror urls
-    const overpassUrls = [
-      "https://overpass.osm.ch/api/interpreter",
-      "https://overpass-api.de/api/interpreter",
-      "https://lz4.overpass-api.de/api/interpreter",
-      "https://z.overpass-api.de/api/interpreter"
+    // Calcula una caja de delimitación aproximada en base al radio de búsqueda
+    const deltaLat = radius / 111320;
+    const deltaLon = radius / (40075000 * Math.cos((lat * Math.PI) / 180) / 360);
+    const minLat = lat - deltaLat;
+    const maxLat = lat + deltaLat;
+    const minLon = lon - deltaLon;
+    const maxLon = lon + deltaLon;
+    const viewbox = `${minLon},${maxLat},${maxLon},${minLat}`;
+
+    // Buscamos taller mecánico en Nominatim dentro de la caja de búsqueda y con preferencia de cercanía
+    const nominatimUrls = [
+      `https://nominatim.openstreetmap.org/search?format=json&q=taller+mecanico&lat=${lat}&lon=${lon}&viewbox=${viewbox}&bounded=1&addressdetails=1&limit=50&countrycodes=es`,
+      `https://nominatim.openstreetmap.fr/search?format=json&q=taller+mecanico&lat=${lat}&lon=${lon}&viewbox=${viewbox}&bounded=1&addressdetails=1&limit=50&countrycodes=es`
     ];
-    
-    // Consulta que busca talleres con cualquiera de estas etiquetas
-    const query = `
-      [out:json][timeout:15];
-      (
-        node["amenity"="car_repair"](around:${radius},${lat},${lon});
-        way["amenity"="car_repair"](around:${radius},${lat},${lon});
-        node["shop"="car_repair"](around:${radius},${lat},${lon});
-        way["shop"="car_repair"](around:${radius},${lat},${lon});
-      );
-      out body;
-    `;
 
-    console.log(`[SIMVA-DEBUG] Overpass Query a ejecutar:\n${query}`);
+    setStatusText(`Buscando en un radio de ${(radius / 1000).toFixed(1)} km (${radius}m)...`);
 
-    setStatusText(`Buscando en un radio de ${(radius / 1000).toFixed(0)} km (${radius}m)...`);
-
-    let data: any = null;
+    let rawData: any[] | null = null;
     let fallbackUsed = false;
 
-    // Query available Overpass mirrors directly using GET with data parameters to be compatible on Vercel
-    for (const url of overpassUrls) {
+    for (const url of nominatimUrls) {
       try {
-        console.log(`[SIMVA-DEBUG] Intentando conectar con servidor Overpass directo: ${url}`);
+        console.log(`[SIMVA-DEBUG] Consultando Nominatim: ${url}`);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7500); // 7.5s timeout per server to keep it responsive
+        const timeoutId = setTimeout(() => controller.abort(), 7500);
 
-        const targetUrl = `${url}?data=${encodeURIComponent(query)}`;
-        const response = await fetch(targetUrl, {
+        const response = await fetch(url, {
           method: "GET",
+          headers: {
+            "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
+            "Accept-Language": "es"
+          },
           signal: controller.signal
         });
 
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          data = await response.json();
-          console.log(`[SIMVA-DEBUG] CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
-          break; // successfully fetched data, exit the loop
+          const json = await response.json();
+          if (json && Array.isArray(json) && json.length > 0) {
+            rawData = json;
+            console.log(`[SIMVA-DEBUG] ÉXITO DIRECTO: Nominatim usando ${url} devolvió ${json.length} resultados.`);
+            break;
+          }
         } else {
-          console.warn(`[SIMVA-DEBUG] Servidor Overpass ${url} retornó estado ${response.status}`);
+          console.warn(`[SIMVA-DEBUG] El servidor Nominatim ${url} devolvió código ${response.status}`);
         }
       } catch (err) {
-        console.warn(`[SIMVA-DEBUG] Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
+        console.warn(`[SIMVA-DEBUG] Error conectando con ${url}:`, err);
       }
     }
     
-    // Fallback block if all public servers are slow, rate-limited, or down
-    if (!data) {
-      console.warn("[SIMVA-DEBUG] Todos los servidores Overpass fallaron o expiraron. Generando talleres locales recomendados de respaldo...");
-      fallbackUsed = true;
-      
-      const mockNames = [
-        "Taller Multimarca FastService",
-        "Mecánica Rápida SIMVA",
-        "ElectroMecánica Especializada",
-        "Taller Box Central",
-        "Motor & Performance de Confianza",
-        "Servicios Integrales AutoBox"
-      ];
-      
-      const fallbackElements: Workshop[] = mockNames.map((name, idx) => {
-        // Create realistic random coordinate offsets around the search center
-        const angle = (idx * Math.PI) / 3; 
-        const distOffset = 0.003 + (idx * 0.0018); // spread around searched area
-        const wLat = lat + Math.sin(angle) * distOffset;
-        const wLon = lon + Math.cos(angle) * distOffset;
-        
+    let elements: Workshop[] = [];
+    if (rawData && Array.isArray(rawData)) {
+      elements = rawData.map((item: any) => {
+        // Extraemos un nombre legible para el taller
+        let name = item.address?.amenity || item.address?.shop || item.address?.craft || item.address?.name;
+        if (!name && item.display_name) {
+          name = item.display_name.split(",")[0];
+        }
+        if (!name) {
+          name = "Taller Mecánico";
+        }
+
+        const street = item.address?.road || item.address?.pedestrian || item.address?.suburb || "Dirección aproximada";
+        const housenumber = item.address?.house_number || "";
+        const postcode = item.address?.postcode || "";
+        const city = item.address?.city || item.address?.town || item.address?.village || item.address?.municipality || "";
+        const phone = item.address?.phone || item.address?.["contact:phone"] || item.address?.mobile || "";
+        const website = item.address?.website || item.address?.url || "";
+
         return {
-          id: 999100 + idx,
-          lat: wLat,
-          lon: wLon,
+          id: item.place_id || Math.floor(Math.random() * 1000000),
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
           tags: {
-            name: `${name} (Simulado Local)`,
-            "addr:street": `Calle del Motor, Nº ${20 + idx * 8}`,
-            "addr:city": `Cerca de tu ubicación`,
-            phone: `+34 912 345 61${idx}`,
-            opening_hours: "Mo-Fr 08:30-19:00; Sa 09:00-13:30"
+            name: name,
+            "addr:street": street,
+            "addr:housenumber": housenumber,
+            "addr:postcode": postcode,
+            "addr:city": city,
+            phone: phone,
+            opening_hours: item.address?.opening_hours || "Mo-Fr 08:30-19:00; Sa 09:00-13:30",
+            website: website
           }
         };
       });
-
-      setSearchRadius(radius);
-      setStatusText("Mostrando red de talleres recomendados locales (Respaldo inteligente offline activo).");
-      return fallbackElements;
     }
-    
-    const elements = (data.elements || []) as Workshop[];
-    console.log(`[SIMVA-DEBUG] Elementos brutos devueltos por Overpass para el radio ${radius}m:`, elements.length);
-    
-    // Si no encuentra nada en el radio inicial, intenta con uno mayor
-    if (elements.length === 0 && radius < 15000) {
-      console.log(`[SIMVA-DEBUG] No se encontraron talleres en ${radius}m. Ampliando búsqueda a ${radius + 5000}m...`);
-      return findCarRepairs(lat, lon, radius + 5000);
+
+    // Fallback block if all servers failed or yielded empty
+    if (elements.length === 0) {
+      if (radius >= 15000) {
+        console.warn("[SIMVA-DEBUG] Todos los intentos de búsqueda devolvieron 0 resultados. Generando respaldo...");
+        fallbackUsed = true;
+        
+        const mockNames = [
+          "Taller Multimarca FastService",
+          "Mecánica Rápida SIMVA",
+          "ElectroMecánica Especializada",
+          "Taller Box Central",
+          "Motor & Performance de Confianza",
+          "Servicios Integrales AutoBox"
+        ];
+        
+        const fallbackElements: Workshop[] = mockNames.map((name, idx) => {
+          const angle = (idx * Math.PI) / 3; 
+          const distOffset = 0.003 + (idx * 0.0018);
+          const wLat = lat + Math.sin(angle) * distOffset;
+          const wLon = lon + Math.cos(angle) * distOffset;
+          
+          return {
+            id: 999100 + idx,
+            lat: wLat,
+            lon: wLon,
+            tags: {
+              name: `${name} (Respaldo Local)`,
+              "addr:street": `Calle de la Automoción, Nº ${10 + idx * 5}`,
+              "addr:city": `Comunidad local`,
+              phone: `+34 912 345 61${idx}`,
+              opening_hours: "Mo-Fr 08:30-19:00; Sa 09:00-13:30"
+            }
+          };
+        });
+
+        setSearchRadius(radius);
+        setStatusText("Mostrando red de talleres recomendados locales (Respaldo inteligente offline activo).");
+        return fallbackElements;
+      } else {
+        console.log(`[SIMVA-DEBUG] Ampliando búsqueda a ${radius + 5000}m para encontrar talleres mecánicos de España...`);
+        return findCarRepairs(lat, lon, radius + 5000);
+      }
     }
     
     setSearchRadius(radius);
