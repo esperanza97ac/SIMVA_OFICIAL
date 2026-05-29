@@ -183,9 +183,18 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
   // Remove the inline calculateDistance from inside the component, since we moved it outside.
   
   const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
+    console.log(`[SIMVA-DEBUG] findCarRepairs invocado con: latitud = ${lat}, longitud = ${lon}, radio de búsqueda = ${radius}m`);
+    if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+      console.error("[SIMVA-DEBUG] Se han proporcionado coordenadas inválidas o indefinidas a findCarRepairs!", { lat, lon });
+      return [];
+    }
+
     // List of reliable public Overpass API mirror urls
     const overpassUrls = [
-      "https://overpass.osm.ch/api/interpreter"
+      "https://overpass.osm.ch/api/interpreter",
+      "https://overpass-api.de/api/interpreter",
+      "https://lz4.overpass-api.de/api/interpreter",
+      "https://z.overpass-api.de/api/interpreter"
     ];
     
     // Consulta que busca talleres con cualquiera de estas etiquetas
@@ -200,6 +209,8 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
       out body;
     `;
 
+    console.log(`[SIMVA-DEBUG] Overpass Query a ejecutar:\n${query}`);
+
     setStatusText(`Buscando en un radio de ${(radius / 1000).toFixed(0)} km (${radius}m)...`);
 
     let data: any = null;
@@ -207,7 +218,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
 
     // First attempt: try to query via our backend server-side proxy to avoid rate-limits and CORS
     try {
-      console.log("Intentando conectar con el proxy Overpass local...");
+      console.log(`[SIMVA-DEBUG] Solicitando talleres vía proxy de backend /api/overpass...`);
       const proxyResp = await fetch("/api/overpass", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,12 +226,12 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
       });
       if (proxyResp.ok) {
         data = await proxyResp.json();
-        console.log("CONEXIÓN CON ÉXITO: Datos de Overpass obtenidos a través de proxy del backend.");
+        console.log("[SIMVA-DEBUG] CONEXIÓN CON ÉXITO: Datos de Overpass obtenidos a través de proxy del backend.");
       } else {
-        console.warn(`El proxy Overpass retornó estado ${proxyResp.status}`);
+        console.warn(`[SIMVA-DEBUG] El proxy Overpass retornó estado ${proxyResp.status}`);
       }
     } catch (proxyErr) {
-      console.warn("Fallo el proxy de Overpass, intentando llamadas directas desde navegador...", proxyErr);
+      console.warn("[SIMVA-DEBUG] Falló el proxy de Overpass, intentando llamadas directas desde navegador...", proxyErr);
     }
 
     // Direct browser fallback if proxy failed or wasn't available
@@ -228,7 +239,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
       // Iterate through available mirrors to fetch the workshops
       for (const url of overpassUrls) {
         try {
-          console.log(`Intentando conectar con servidor Overpass directo: ${url}`);
+          console.log(`[SIMVA-DEBUG] Intentando conectar con servidor Overpass directo: ${url}`);
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout per server to keep it responsive
 
@@ -242,20 +253,20 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
 
           if (response.ok) {
             data = await response.json();
-            console.log(`CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
+            console.log(`[SIMVA-DEBUG] CONEXIÓN CON ÉXITO DIRECTA: Overpass API usando ${url}`);
             break; // successfully fetched data, exit the loop
           } else {
-            console.warn(`Servidor Overpass ${url} retornó estado ${response.status}`);
+            console.warn(`[SIMVA-DEBUG] Servidor Overpass ${url} retornó estado ${response.status}`);
           }
         } catch (err) {
-          console.warn(`Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
+          console.warn(`[SIMVA-DEBUG] Timeout o fallo al conectar con servidor Overpass ${url}:`, err);
         }
       }
     }
     
     // Fallback block if all public servers are slow, rate-limited, or down
     if (!data) {
-      console.warn("Todos los servidores Overpass fallaron o expiraron. Generando talleres locales recomendados de respaldo...");
+      console.warn("[SIMVA-DEBUG] Todos los servidores Overpass fallaron o expiraron. Generando talleres locales recomendados de respaldo...");
       fallbackUsed = true;
       
       const mockNames = [
@@ -294,10 +305,11 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     }
     
     const elements = (data.elements || []) as Workshop[];
+    console.log(`[SIMVA-DEBUG] Elementos brutos devueltos por Overpass para el radio ${radius}m:`, elements.length);
     
     // Si no encuentra nada en el radio inicial, intenta con uno mayor
     if (elements.length === 0 && radius < 15000) {
-      console.log(`No se encontraron talleres en ${radius}m. Ampliando búsqueda...`);
+      console.log(`[SIMVA-DEBUG] No se encontraron talleres en ${radius}m. Ampliando búsqueda a ${radius + 5000}m...`);
       return findCarRepairs(lat, lon, radius + 5000);
     }
     
