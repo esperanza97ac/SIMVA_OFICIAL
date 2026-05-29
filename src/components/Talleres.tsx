@@ -185,10 +185,6 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
   const findCarRepairs = async (lat: number, lon: number, radius = 5000): Promise<Workshop[]> => {
     // List of reliable public Overpass API mirror urls
     const overpassUrls = [
-      "https://overpass-api.de/api/interpreter",
-      "https://lz4.overpass-api.de/api/interpreter",
-      "https://z.overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter",
       "https://overpass.osm.ch/api/interpreter"
     ];
     
