@@ -348,19 +348,23 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
     try {
       let results: any[] = [];
       try {
-        // Try to fetch via our backend proxy first to avoid Nominatim Vercel / referer blocking
-        const geocodeResp = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
+        // En Vercel o IA Studio, llamamos directamente al endpoint oficial de Nominatim con filtro de España
+        const queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=es`;
+        const geocodeResp = await fetch(queryUrl, {
+          headers: {
+            "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
+            "Accept-Language": "es"
+          }
+        });
+        
         if (geocodeResp.ok) {
           results = await geocodeResp.json();
         } else {
-          throw new Error("Proxy geocode returned error");
+          throw new Error("Error en la respuesta directa de Nominatim");
         }
-      } catch (proxyError) {
-        console.warn("Fallo en el proxy local de geocodificación. Intentando llamada directa identificada a Nominatim...", proxyError);
-        // Free open Nominatim geocoding endpoint as a clean identified fallback
-        const geocodeResp = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&email=espe.freelancer@gmail.com&countrycodes=es`
-        );
+      } catch (directError) {
+        console.warn("Fallo en la geocodificación directa. Intentando llamada mediante proxy local del servidor...", directError);
+        const geocodeResp = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
         if (geocodeResp.ok) {
           results = await geocodeResp.json();
         } else {

@@ -1325,8 +1325,7 @@ export default function App() {
           {/* PERSISTENT RESPONSIVE NAVIGATION BAR (Sidebar on desktop / bottom bar on mobile) */}
           <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 py-4 bg-[#1e232d]/95 backdrop-blur-xl border-t border-white/5 rounded-t-2xl shadow-[0_-5px_25px_rgba(0,0,0,0.5)] md:sticky md:top-24 md:z-10 md:w-64 md:flex-col md:justify-start md:items-stretch md:gap-3 md:px-4 md:py-5 md:bg-[#11141a]/60 md:border md:border-white/5 md:rounded-2xl md:shadow-none shrink-0">
             <div className="hidden md:block px-3 pb-3 border-b border-white/5 mb-2">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-[#2ac1ff] font-extrabold pb-1 block">SIMVA MENÚ</span>
-              <span className="text-[10px] text-on-surface-variant font-medium block font-sans">Diagnóstico vehicular</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#2ac1ff] font-extrabold block">MENÚ</span>
             </div>
             
             <button
