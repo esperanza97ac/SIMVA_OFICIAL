@@ -364,7 +364,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
         console.warn("Fallo en el proxy local de geocodificación. Intentando llamada directa identificada a Nominatim...", proxyError);
         // Free open Nominatim geocoding endpoint as a clean identified fallback
         const geocodeResp = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&email=espe.freelancer@gmail.com`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&email=espe.freelancer@gmail.com&countrycodes=es`
         );
         if (geocodeResp.ok) {
           results = await geocodeResp.json();

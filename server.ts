@@ -243,7 +243,7 @@ app.get("/api/geocode", async (req, res) => {
       const timeoutId = setTimeout(() => controller.abort(), 6500); // 6.5s timeout per mirror
 
       const response = await fetch(
-        `${baseUrl}?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+        `${baseUrl}?format=json&q=${encodeURIComponent(searchQuery)}&limit=1&countrycodes=es`,
         {
           headers: {
             "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
