@@ -1084,7 +1084,7 @@ export default function App() {
     if (!currentUser) return;
 
     const doubleConfirm = window.confirm(
-      "¿ESTÁS COMPLETAMENTE SEGURO de que deseas eliminar tu cuenta permanentemente?\n\nEsta acción borrará irrevocablemente tu vehículo, tus tareas, tus historiales y tu cuenta de acceso de forma inmediata. No podrás recuperar tus datos."
+      "¿ESTÁS COMPLETAMENTE SEGURO de que deseas eliminar tu cuenta permanentemente?\n\nEsta acción borrará irrevocablemente tu vehículo, tus tareas, tus historiales, tus documentos, fotos e informes y tu cuenta de acceso de forma inmediata. No podrás recuperar tus datos."
     );
 
     if (!doubleConfirm) return;
@@ -1094,15 +1094,37 @@ export default function App() {
     setInfoMessage(null);
 
     try {
-      // 1. Wipe database entries
       const batch = writeBatch(db);
+
+      // 1. Delete documents list
+      batch.delete(doc(db, "users", currentUser.uid, "documents", "list"));
+
+      // 2. Delete settings
+      batch.delete(doc(db, "users", currentUser.uid, "settings", "notifications"));
+
+      // 3. Delete car profile
       batch.delete(doc(db, "users", currentUser.uid, "car", "profile"));
 
-      const tasksSnap = await getDocs(collection(db, "users", currentUser.uid, "tasks"));
-      tasksSnap.forEach((d) => batch.delete(d.ref));
+      // 4. Delete legacy root tasks & tracking subcollections
+      const legacyTasksSnap = await getDocs(collection(db, "users", currentUser.uid, "tasks"));
+      legacyTasksSnap.forEach((d) => batch.delete(d.ref));
 
-      const trackingSnap = await getDocs(collection(db, "users", currentUser.uid, "tracking"));
-      trackingSnap.forEach((d) => batch.delete(d.ref));
+      const legacyTrackingSnap = await getDocs(collection(db, "users", currentUser.uid, "tracking"));
+      legacyTrackingSnap.forEach((d) => batch.delete(d.ref));
+
+      // 5. Delete modern vehicles and their nested tasks & tracking subcollections
+      const vehiclesSnap = await getDocs(collection(db, "users", currentUser.uid, "vehicles"));
+      for (const vehicleDoc of vehiclesSnap.docs) {
+        const vehicleId = vehicleDoc.id;
+        
+        const nestedTasksSnap = await getDocs(collection(db, "users", currentUser.uid, "vehicles", vehicleId, "tasks"));
+        nestedTasksSnap.forEach((d) => batch.delete(d.ref));
+
+        const nestedTrackingSnap = await getDocs(collection(db, "users", currentUser.uid, "vehicles", vehicleId, "tracking"));
+        nestedTrackingSnap.forEach((d) => batch.delete(d.ref));
+
+        batch.delete(vehicleDoc.ref);
+      }
 
       await batch.commit();
 
@@ -1110,12 +1132,15 @@ export default function App() {
       localStorage.removeItem("automoto_profile");
       localStorage.removeItem("automoto_tasks");
       localStorage.removeItem("automoto_tracking");
+      localStorage.removeItem("simva_documents");
+      localStorage.removeItem("simva_fcm_token");
 
       setCarProfile(null);
+      setVehicles([]);
       setTasks([]);
       setTracking([]);
 
-      // 2. Delete the user authentication record
+      // 6. Delete the user authentication record
       await currentUser.delete();
 
       setInfoMessage("Tu cuenta y todos tus datos han sido eliminados de forma permanente.");
@@ -1306,6 +1331,7 @@ export default function App() {
               onClick={() => {
                 setActiveScreen("garaje");
                 setIsRegistering(false);
+                setSelectedDetailVehicleId(null);
               }}
               aria-label="Ver garaje de vehículos activos"
               className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
@@ -1387,7 +1413,6 @@ export default function App() {
                         onClick={() => setIsRegistering(false)}
                         className="py-2 px-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2 self-start mb-2"
                       >
-                        <ArrowLeft className="h-4 w-4 text-[#2ac1ff]" />
                         <span>Volver al Garaje</span>
                       </button>
                       <CarProfileForm 
@@ -1431,8 +1456,7 @@ export default function App() {
                             onClick={() => setSelectedDetailVehicleId(null)}
                             className="py-2 px-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
                           >
-                            <ArrowLeft className="h-4 w-4 text-[#2ac1ff]" />
-                            <span>← Volver al Garaje</span>
+                            <span>Volver al Garaje</span>
                           </button>
 
                           <button

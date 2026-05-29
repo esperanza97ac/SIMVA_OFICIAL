@@ -168,7 +168,10 @@ export default function TaskTracker({
     let message = "";
 
     if (task.cada_km > 0) {
-      if (kmRemaining < 500) {
+      if (kmRemaining <= 0) {
+        statusColor = "danger";
+        message = `¡CADUCADO! Excedido por ${Math.abs(kmRemaining).toLocaleString("es-ES")} km. Requiere atención inmediata.`;
+      } else if (kmRemaining < 500) {
         statusColor = "danger";
         message = `¡Atención! Restan menos de 500 km (${kmRemaining.toLocaleString("es-ES")} km) para el recambio.`;
       } else if (kmRemaining <= 1000) {
@@ -180,7 +183,10 @@ export default function TaskTracker({
       }
     } else {
       // Time-only task backup rules
-      if (roundedMonthsRemaining <= 1) {
+      if (roundedMonthsRemaining <= 0) {
+        statusColor = "danger";
+        message = "¡CADUCADO! El intervalo de tiempo ha vencido. Requiere recambio de inmediato.";
+      } else if (roundedMonthsRemaining <= 1) {
         statusColor = "danger";
         message = "¡Atención! Expiración temporal inminente (un mes o menos).";
       } else if (roundedMonthsRemaining <= 2) {
@@ -489,12 +495,16 @@ export default function TaskTracker({
           const formattedMonthsRemaining = Math.max(0, Math.round(Number(monthsRemaining)));
           const formattedIntervalMonths = Math.max(0, Math.round(Number(task.cada_meses)));
 
+          const isCaducado = (task.cada_km > 0 && kmRemaining <= 0) || (task.cada_meses > 0 && formattedMonthsRemaining <= 0);
+
           return (
             <div
               id={`task-card-${task.id}`}
               key={task.id}
               className={`garage-panel rounded-2xl p-5 md:p-6 border-l-4 flex flex-col justify-between gap-5 transition-all hover:translate-y-[-2px] ${
-                statusColor === "danger"
+                isCaducado
+                  ? "border-l-red-650 bg-red-950/40 text-red-350 shadow-[0_5px_22px_rgba(239,68,68,0.25)] border border-red-500/25"
+                  : statusColor === "danger"
                   ? "border-l-red-500 shadow-[0_5px_15px_rgba(239,68,68,0.1)] bg-red-950/20"
                   : statusColor === "warning"
                   ? "border-l-amber-500 shadow-[0_5px_15px_rgba(245,158,11,0.1)] bg-amber-950/20"
@@ -508,7 +518,7 @@ export default function TaskTracker({
                   <div className="flex items-start gap-3">
                     {/* Clean contextual icon inside vibrant circle */}
                     <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${
-                      statusColor === "danger"
+                      isCaducado || statusColor === "danger"
                         ? "bg-red-500/10 border-red-500/30"
                         : statusColor === "warning"
                         ? "bg-amber-500/10 border-amber-500/30"
@@ -518,8 +528,13 @@ export default function TaskTracker({
                     </div>
                     
                     <div className="text-left">
-                      <h4 className="font-display text-sm md:text-base font-extrabold text-white leading-tight">
-                        {task.tarea}
+                      <h4 className="font-display text-sm md:text-base font-extrabold text-white leading-tight flex flex-col gap-1 items-start">
+                        <span>{task.tarea}</span>
+                        {isCaducado && (
+                          <span className="inline-block mt-1 font-mono text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-black uppercase tracking-wider animate-pulse">
+                            ⚠️ CADUCADO - REQUIERE ATENCIÓN
+                          </span>
+                        )}
                       </h4>
                       <p className="font-mono text-[9px] text-primary-450 mt-1 uppercase tracking-widest">
                         {task.isCustom ? "Ajuste Personalizado" : "Recomendado Fabricante"}
@@ -570,13 +585,13 @@ export default function TaskTracker({
                   <div className="flex justify-between items-center text-xs font-mono">
                     <span className="text-primary-400 uppercase tracking-wider text-[9px] font-bold">Consumo de vida útil</span>
                     <span className={`font-black tracking-tight ${
-                      statusColor === "danger"
-                        ? "text-red-450 neon-glow-red"
+                      isCaducado || statusColor === "danger"
+                        ? "text-red-450 neon-glow-red font-black text-xs uppercase"
                         : statusColor === "warning"
                         ? "text-amber-450 neon-glow-amber"
                         : "text-emerald-450 neon-glow-green"
                     }`}>
-                      {wearPercentage}%
+                      {isCaducado ? "EXCEDIDO 100%" : `${wearPercentage}%`}
                     </span>
                   </div>
 
@@ -584,13 +599,15 @@ export default function TaskTracker({
                   <div className="w-full bg-primary-950 h-3 rounded-full overflow-hidden border border-primary-900 p-[1px]">
                     <div 
                       className={`h-full rounded-full transition-all duration-500 relative ${
-                        statusColor === "danger"
+                        isCaducado
+                          ? "bg-[#ff2d55] shadow-[0_0_12px_rgba(255,45,85,1.0)]"
+                          : statusColor === "danger"
                           ? "bg-gradient-to-r from-red-650 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.7)]"
                           : statusColor === "warning"
                           ? "bg-gradient-to-r from-amber-650 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.7)]"
                           : "bg-gradient-to-r from-emerald-650 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
                       }`}
-                      style={{ width: `${wearPercentage}%` }}
+                      style={{ width: `${isCaducado ? 100 : wearPercentage}%` }}
                     />
                   </div>
                   
