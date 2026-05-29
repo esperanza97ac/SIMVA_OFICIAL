@@ -221,27 +221,57 @@ app.get("/api/geocode", async (req, res) => {
     return res.status(400).json({ error: "Missing address query parameter 'q'" });
   }
 
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(String(q))}&limit=1`,
-      {
-        headers: {
-          "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
-          "Accept-Language": "es"
-        }
-      }
-    );
+  // List of public high-availability Nominatim geocoding instances
+  const nominatimSecUrls = [
+    "https://nominatim.openstreetmap.org/search",
+    "https://nominatim.openstreetmap.fr/search",
+    "https://nominatim.qgis.org/search"
+  ];
 
-    if (!response.ok) {
-      throw new Error(`Nominatim respondió con código de estado: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return res.json(data);
-  } catch (error: any) {
-    console.error("[GEOCODE PROXY ERROR] Fallo al geocodificar mediante Nominatim:", error);
-    return res.status(500).json({ error: error.message || "Fallo en la resolución geográfica." });
+  let searchQuery = String(q).trim();
+  // If the search term is a 5-digit Spanish postcode, append España to assist geocoding reliability
+  if (/^\d{5}$/.test(searchQuery)) {
+    searchQuery = `${searchQuery}, España`;
   }
+
+  let lastError = null;
+
+  for (const baseUrl of nominatimSecUrls) {
+    try {
+      console.log(`[GEOCODE PROXY] Intentando geolocalizar con ${baseUrl} para la consulta: "${searchQuery}"`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6500); // 6.5s timeout per mirror
+
+      const response = await fetch(
+        `${baseUrl}?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+        {
+          headers: {
+            "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)",
+            "Accept-Language": "es"
+          },
+          signal: controller.signal
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        // Even if empty, it is an official response from a running endpoint. Let's return it.
+        return res.json(data);
+      } else {
+        console.warn(`[GEOCODE PROXY] El servidor ${baseUrl} retornó código de estado: ${response.status}`);
+      }
+    } catch (err: any) {
+      console.warn(`[GEOCODE PROXY] Error o tiempo de espera agotado con ${baseUrl}:`, err.message);
+      lastError = err;
+    }
+  }
+
+  return res.status(502).json({
+    error: "Todos los servidores públicos de geocodificación Nominatim fallaron o superaron el límite de tiempo.",
+    detail: lastError?.message
+  });
 });
 
 app.post("/api/overpass", async (req, res) => {
@@ -322,18 +352,22 @@ app.post("/api/maintenance-plan", async (req, res) => {
 - Vehículo/Modelo: ${makeModel}
 - Año: ${year}
 - Tipo de Motor/Combustible: ${fuelType}
-${vin ? `- Número identificador (VIN / Bastidor): ${vin} (Úsalo para verificar de manera híper-precisa la variante del motor, especificaciones de bujías, transmisión o cadena/correa, etc.)` : ""}
+${vin ? `- Número identificador (VIN / Bastidor): ${vin}` : ""}
+
+${vin ? `ATENCIÓN ESPECIAL DE EXHAUSTIVIDAD (CÓDIGO VIN PROPORCIONADO):
+Se ha facilitado el número de bastidor (VIN): ${vin}. Como disponemos de este identificador, debes decodificar y analizar detalladamente el tipo de motorización (cilindrada, arquitectura, correa vs cadena, variantes de admisión, especificaciones de bujías correspondientes, fluidos de transmisión específicos, etc.). 
+Por lo tanto, la lista de tareas de mantenimiento DEBE SER ALTAMENTE EXHAUSTIVA Y DETALLADA. 
+- Debes incluir entre 10 y 15 tareas específicas (en lugar de las básicas estándar).
+- Incorpora tareas pormenorizadas como: sustitución de correa de accesorios o distribución según especificaciones del código de motor, cambio de valvulina o fluido de la caja de cambios / diferencial, purga y renovación del líquido refrigerante específico, comprobación del desgaste de bobinas, reglaje o sensores de motor, filtros específicos de combustible según inyección, etc.` : "Si no se indica un VIN, devuelve una lista de las tareas de mantenimiento cíclicas preventivas básicas e intermedias estándar recomendadas (entre 5 y 10 tareas clave principales)."}
 
 Si no encuentras el dato exacto o manual de taller de este modelo en tus fuentes, debes aplicar estrictamente los estándares de la industria para este tipo de vehículo (${isMoto ? "Moto" : "Coche"}) con motor (${fuelType}).
 
-Devuelve una lista de las tareas de mantenimiento cíclicas preventivas básicas e intermedias recomendadas (por ejemplo, para coches: cambio de aceite y filtro, bujías, filtros de habitáculo/aire, líquido de frenos; para motos: lubricación y tensión de cadena de arrastre cada 1000km, reglaje de válvulas, aceite de horquilla, cambio de refrigerante si aplica, etc.).
-
 Tu respuesta debe ser un arreglo de objetos JSON en español, donde cada objeto tenga exactamente estos campos:
-- "tarea": Descripción muy corta y concisa en español de la tarea de mantenimiento (ej: "Cambio de aceite y filtro de motor", "Tensión y engrase de cadena"). Máximo 50 caracteres.
+- "tarea": Descripción concisa en español de la tarea de mantenimiento (ej: "Cambio de aceite sintético 0W-30 y filtro de motor", "Sustitución de líquido de transmisión automática ATF", "Tensión y engrase de cadena"). Máximo 60 caracteres.
 - "cada_km": Kilometraje recomendado para realizar la tarea (número entero positivo, ej. 5000, 10000, 15000, 30000). Si la tarea solo depende de meses, usa 0.
 - "cada_meses": Tiempo en meses recomendado para realizar la tarea (número entero positivo, ej. 6, 12, 24). Si la tarea solo depende de kilómetros, usa 0.
 
-El arreglo de tareas debe contener de 5 a 10 tareas clave principales del plan, ordenadas de menor a mayor periodicidad de kilómetros (y meses de forma secundaria). No mezclas tareas duplicadas.`;
+El arreglo de tareas debe ordenarse de menor a mayor periodicidad de kilómetros (y meses de forma secundaria). No mezcles tareas duplicadas.`;
 
     const response = await client.models.generateContent({
       model: "gemini-3.5-flash",

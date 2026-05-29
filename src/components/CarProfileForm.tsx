@@ -10,7 +10,8 @@ import {
   Gauge, 
   Wrench, 
   ArrowRight,
-  Bike
+  Bike,
+  AlertCircle
 } from "lucide-react";
 import { CarProfile, FuelType, VehicleType } from "../types";
 
@@ -516,6 +517,14 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
           </div>
         </section>
+
+        {/* Minimalist advisory notice */}
+        <div className="flex gap-3 p-4 bg-primary-fixed-dim/5 border border-primary-fixed-dim/15 rounded-2xl text-left shadow-[0_0_15px_rgba(42,193,255,0.03)]">
+          <AlertCircle className="h-4.5 w-4.5 text-[#2ac1ff] shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-gray-400">
+            <strong>SIMVA</strong> te ofrece una información orientativa de alta precisión. Ante la duda, recurre a un profesional.
+          </p>
+        </div>
 
         {/* GDPR Legal Acknowledgment checkbox for Vehicle Registration */}
         <section className="glass-card p-5 rounded-2xl bg-black/40 border border-white/10 space-y-4 shadow-lg">
