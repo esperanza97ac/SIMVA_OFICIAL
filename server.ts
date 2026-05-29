@@ -293,13 +293,12 @@ app.post("/api/overpass", async (req, res) => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s timeout
 
-      const response = await fetch(url, {
-        method: "POST",
+      const targetUrl = `${url}?data=${encodeURIComponent(query)}`;
+      const response = await fetch(targetUrl, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
           "User-Agent": "SimvaMaintenanceApp/1.0 (espe.freelancer@gmail.com)"
         },
-        body: new URLSearchParams({ data: query }),
         signal: controller.signal
       });
 

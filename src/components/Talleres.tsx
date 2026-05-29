@@ -236,10 +236,9 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout per server to keep it responsive
 
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ data: query }),
+          const targetUrl = `${url}?data=${encodeURIComponent(query)}`;
+          const response = await fetch(targetUrl, {
+            method: "GET",
             signal: controller.signal
           });
 
