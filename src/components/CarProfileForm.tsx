@@ -110,7 +110,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
     const finalLastKm = lastMaintKm ? Number(lastMaintKm) : undefined;
 
     onSave({
-      id: currentProfile?.id || `veh-${Date.now()}`,
+      id: currentProfile?.id || undefined,
       vehicleType,
       makeModel: fullMakeModel,
       fuelType,

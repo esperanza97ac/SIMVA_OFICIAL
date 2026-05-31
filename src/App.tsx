@@ -195,7 +195,7 @@ function SVGTachometer({ isMoto }: { isMoto: boolean }) {
   const angle = -140 + (currentRPM / maxVal) * 280;
 
   return (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-28 h-28 opacity-20 pointer-events-none overflow-visible select-none transition-all duration-300 group-hover:opacity-35">
+    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-28 h-28 opacity-[0.65] pointer-events-none overflow-visible select-none transition-all duration-300 group-hover:opacity-[0.85]">
       <svg viewBox="0 0 100 100" className="w-full h-full text-white overflow-visible">
         {/* RPM Arch background grid */}
         <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
@@ -277,14 +277,6 @@ function SVGTachometer({ isMoto }: { isMoto: boolean }) {
             fill="#2ac1ff"
           />
         </g>
-
-        {/* Tachometer legend metrics */}
-        <text x="50" y="65" fontSize="6.5" textAnchor="middle" fill="rgba(255,255,255,0.25)" className="font-mono uppercase tracking-widest font-extrabold">
-          RPM x1000
-        </text>
-        <text x="50" y="73.5" fontSize="7.5" textAnchor="middle" fill={isMoto ? "#ef4444" : "#2ac1ff"} className="font-mono font-black tracking-wider uppercase">
-          {isMoto ? "MOTO 14K" : "CAR 8K"}
-        </text>
       </svg>
     </div>
   );
@@ -534,51 +526,24 @@ export default function App() {
             { merge: true }
           );
 
-          // Get all vehicles
+          // Get all vehicles directly from subcollection using getDocs
           const vehiclesSnap = await getDocs(collection(db, "users", user.uid, "vehicles"));
-          let fetchedVehicles: CarProfile[] = [];
+          const fetchedVehicles: CarProfile[] = [];
           
           vehiclesSnap.forEach((d) => {
             const data = d.data();
             fetchedVehicles.push({
               id: d.id,
-              ...data
-            } as CarProfile);
+              makeModel: String(data.makeModel || ""),
+              fuelType: data.fuelType as any,
+              currentKm: Number(data.currentKm) || 0,
+              monthlyKm: Number(data.monthlyKm) || 0,
+              year: Number(data.year) || 0,
+              vehicleType: data.vehicleType as any || "Coche",
+              vin: data.vin ? String(data.vin) : undefined,
+              registrationDate: data.registrationDate ? String(data.registrationDate) : undefined
+            });
           });
-
-          // Fallback to legacy single car profile & Migrate
-          if (fetchedVehicles.length === 0) {
-            const carDoc = await getDoc(doc(db, "users", user.uid, "car", "profile"));
-            if (carDoc.exists()) {
-              const legacyCar = {
-                id: "default-vehicle",
-                vehicleType: "Coche" as const,
-                ...carDoc.data()
-              } as CarProfile;
-              fetchedVehicles = [legacyCar];
-              
-              // Migrate single car to new collection
-              await setDoc(doc(db, "users", user.uid, "vehicles", "default-vehicle"), legacyCar);
-              
-              // Migrate fallback tasks to subcollection
-              const legacyTasksSnap = await getDocs(collection(db, "users", user.uid, "tasks"));
-              const batchTasks = writeBatch(db);
-              legacyTasksSnap.forEach((t) => {
-                const tdata = t.data() as MaintenanceTask;
-                batchTasks.set(doc(db, "users", user.uid, "vehicles", "default-vehicle", "tasks", t.id), tdata);
-              });
-              await batchTasks.commit();
-
-              // Migrate fallback tracking to subcollection
-              const legacyTrackSnap = await getDocs(collection(db, "users", user.uid, "tracking"));
-              const batchTrack = writeBatch(db);
-              legacyTrackSnap.forEach((tr) => {
-                const trData = tr.data() as TaskTracking;
-                batchTrack.set(doc(db, "users", user.uid, "vehicles", "default-vehicle", "tracking", tr.id), trData);
-              });
-              await batchTrack.commit();
-            }
-          }
 
           setVehicles(fetchedVehicles);
           localStorage.setItem("simva_vehicles", JSON.stringify(fetchedVehicles));
@@ -777,8 +742,27 @@ export default function App() {
     lastMaintMonths?: number,
     lastMaintKm?: number
   ) => {
-    const vehicleId = profile.id || `veh-${Date.now()}`;
-    const cleanProfile = { ...profile, id: vehicleId };
+    let vehicleId = profile.id;
+    if (!vehicleId) {
+      if (currentUser) {
+        const autoRef = doc(collection(db, "users", currentUser.uid, "vehicles"));
+        vehicleId = autoRef.id;
+      } else {
+        vehicleId = `veh-${Date.now()}`;
+      }
+    }
+
+    const cleanProfile: CarProfile = {
+      id: vehicleId,
+      vehicleType: profile.vehicleType || "Coche",
+      makeModel: String(profile.makeModel || ""),
+      fuelType: profile.fuelType || "Gasolina",
+      currentKm: Number(profile.currentKm) || 0,
+      monthlyKm: Number(profile.monthlyKm) || 0,
+      year: Number(profile.year) || 0,
+      vin: profile.vin ? String(profile.vin) : undefined,
+      registrationDate: profile.registrationDate ? String(profile.registrationDate) : undefined
+    };
 
     setCarProfile(cleanProfile);
     localStorage.setItem("simva_selected_vehicle_id", vehicleId);
@@ -797,6 +781,7 @@ export default function App() {
         await setDoc(doc(db, "users", currentUser.uid, "vehicles", vehicleId), cleanProfile);
       } catch (err) {
         console.error("Error saving profile to Firestore:", err);
+        handleFirestoreError(err, OperationType.WRITE, `users/${currentUser.uid}/vehicles/${vehicleId}`);
       }
     }
 
