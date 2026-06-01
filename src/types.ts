@@ -9,8 +9,6 @@ export interface CarProfile {
   year: number;
   currentKm: number;
   monthlyKm: number;
-  vin?: string;
-  registrationDate?: string; // Optional date for time predictions
 }
 
 export interface MaintenanceTask {

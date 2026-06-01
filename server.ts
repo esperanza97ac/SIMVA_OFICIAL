@@ -361,12 +361,7 @@ Por lo tanto, la lista de tareas de mantenimiento DEBE SER ALTAMENTE EXHAUSTIVA 
 
 Si no encuentras el dato exacto o manual de taller de este modelo en tus fuentes, debes aplicar estrictamente los estándares de la industria para este tipo de vehículo (${isMoto ? "Moto" : "Coche"}) con motor (${fuelType}).
 
-Tu respuesta debe ser un arreglo de objetos JSON en español, donde cada objeto tenga exactamente estos campos:
-- "tarea": Descripción concisa en español de la tarea de mantenimiento (ej: "Cambio de aceite sintético 0W-30 y filtro de motor", "Sustitución de líquido de transmisión automática ATF", "Tensión y engrase de cadena"). Máximo 60 caracteres.
-- "cada_km": Kilometraje recomendado para realizar la tarea (número entero positivo, ej. 5000, 10000, 15000, 30000). Si la tarea solo depende de meses, usa 0.
-- "cada_meses": Tiempo en meses recomendado para realizar la tarea (número entero positivo, ej. 6, 12, 24). Si la tarea solo depende de kilómetros, usa 0.
-
-El arreglo de tareas debe ordenarse de menor a mayor periodicidad de kilómetros (y meses de forma secundaria). No mezcles tareas duplicadas.`;
+Tu respuesta debe ser un objeto JSON con el siguiente esquema: "plan" (el arreglo de objetos de tareas en español).`;
 
     const response = await client.models.generateContent({
       model: "gemini-3.5-flash",
@@ -374,25 +369,32 @@ El arreglo de tareas debe ordenarse de menor a mayor periodicidad de kilómetros
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              tarea: {
-                type: Type.STRING,
-                description: "Nombre de la tarea de mantenimiento en español.",
+          type: Type.OBJECT,
+          properties: {
+            plan: {
+              type: Type.ARRAY,
+              description: "Arreglo de tareas de mantenimiento ordenadas de menor a mayor kilometraje.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  tarea: {
+                    type: Type.STRING,
+                    description: "Nombre de la tarea de mantenimiento en español.",
+                  },
+                  cada_km: {
+                    type: Type.INTEGER,
+                    description: "Periodicidad en kilómetros. 0 si no aplica kilometraje.",
+                  },
+                  cada_meses: {
+                    type: Type.INTEGER,
+                    description: "Periodicidad en meses. 0 si no aplica tiempo.",
+                  },
+                },
+                required: ["tarea", "cada_km", "cada_meses"],
               },
-              cada_km: {
-                type: Type.INTEGER,
-                description: "Periodicidad en kilómetros. 0 si no aplica kilometraje.",
-              },
-              cada_meses: {
-                type: Type.INTEGER,
-                description: "Periodicidad en meses. 0 si no aplica tiempo.",
-              },
-            },
-            required: ["tarea", "cada_km", "cada_meses"],
+            }
           },
+          required: ["plan"],
         },
       },
     });
@@ -402,7 +404,9 @@ El arreglo de tareas debe ordenarse de menor a mayor periodicidad de kilómetros
       throw new Error("No se recibió respuesta válida del modelo Gemini.");
     }
 
-    const plan = JSON.parse(text.trim());
+    const result = JSON.parse(text.trim());
+    const plan = result.plan || [];
+
     return res.json({ plan, isFallback: false });
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);

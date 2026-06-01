@@ -9,7 +9,7 @@ import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
-import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin } from "lucide-react";
 import Talleres from "./components/Talleres";
 import MisDocumentos from "./components/MisDocumentos";
 
@@ -298,9 +298,10 @@ export default function App() {
   const [authChecking, setAuthChecking] = useState(true);
 
   // Selected visual view screen (registrar, garaje or perfil)
-  const [activeScreen, setActiveScreen] = useState<"garaje" | "talleres" | "documentos" | "perfil">("garaje");
+  const [activeScreen, setActiveScreen] = useState<"garaje" | "mantenimientos" | "talleres" | "documentos" | "perfil">("garaje");
   const [selectedDetailVehicleId, setSelectedDetailVehicleId] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Embedded Settings Preferences (from deleted Ajustes screen)
   const [warnDistance, setWarnDistance] = useState<number>(() => {
@@ -539,9 +540,7 @@ export default function App() {
               currentKm: Number(data.currentKm) || 0,
               monthlyKm: Number(data.monthlyKm) || 0,
               year: Number(data.year) || 0,
-              vehicleType: data.vehicleType as any || "Coche",
-              vin: data.vin ? String(data.vin) : undefined,
-              registrationDate: data.registrationDate ? String(data.registrationDate) : undefined
+              vehicleType: (data.vehicleType as any) || "Coche"
             });
           });
 
@@ -760,8 +759,6 @@ export default function App() {
       currentKm: Number(profile.currentKm) || 0,
       monthlyKm: Number(profile.monthlyKm) || 0,
       year: Number(profile.year) || 0,
-      vin: profile.vin ? String(profile.vin) : undefined,
-      registrationDate: profile.registrationDate ? String(profile.registrationDate) : undefined
     };
 
     setCarProfile(cleanProfile);
@@ -802,7 +799,6 @@ export default function App() {
             fuelType: profile.fuelType,
             year: profile.year,
             vehicleType: profile.vehicleType,
-            vin: profile.vin,
           }),
         });
 
@@ -1295,9 +1291,9 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-28 md:pt-24 md:pb-8">
+    <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-16 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
-      <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} />
+      <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
 
       {/* Main container with responsive layouts */}
       {!currentUser ? (
@@ -1306,74 +1302,202 @@ export default function App() {
         </main>
       ) : (
         <div className="flex-1 flex flex-col md:flex-row w-full max-w-7xl mx-auto relative px-4 md:px-8 gap-6 pt-4">
-          
-          {/* PERSISTENT RESPONSIVE NAVIGATION BAR (Sidebar on desktop / bottom bar on mobile) */}
-          <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 py-4 bg-[#1e232d]/95 backdrop-blur-xl border-t border-white/5 rounded-t-2xl shadow-[0_-5px_25px_rgba(0,0,0,0.5)] md:sticky md:top-24 md:z-10 md:w-64 md:flex-col md:justify-start md:items-stretch md:gap-3 md:px-4 md:py-5 md:bg-[#11141a]/60 md:border md:border-white/5 md:rounded-2xl md:shadow-none shrink-0">
-            <div className="hidden md:block px-3 pb-3 border-b border-white/5 mb-2">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-[#2ac1ff] font-extrabold block">MENÚ</span>
+          {/* MOBILE SIDEBAR BACKGROUND SHADOW BACKDROP */}
+          {isMobileMenuOpen && (
+            <div 
+              className="fixed inset-0 z-45 bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+          )}
+
+          {/* MOBILE SIDEBAR COLLAPSIBLE DRAWER */}
+          <nav 
+            className={`fixed top-0 left-0 h-screen w-72 z-48 bg-[#11141a]/95 backdrop-blur-2xl border-r border-white/10 pt-20 pb-8 px-5 flex flex-col justify-start items-stretch gap-3 shadow-[5px_0_30px_rgba(0,0,0,0.6)] md:hidden transition-transform duration-300 ease-in-out ${
+              isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            <div className="flex items-center justify-between px-3 pb-3 border-b border-white/15 mb-2">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#2ac1ff] font-extrabold">MENÚ PRINCIPAL</span>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1 rounded-md text-on-surface-variant hover:text-white cursor-pointer"
+                title="Cerrar Menú"
+              >
+                <span className="text-[10px] font-mono uppercase font-semibold">cerrar ✕</span>
+              </button>
+            </div>
+
+            {/* Garaje button */}
+            <button
+              onClick={() => {
+                setActiveScreen("garaje");
+                setIsRegistering(false);
+                setSelectedDetailVehicleId(null);
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "garaje"
+                  ? "text-primary-fixed-dim bg-white/5 border border-[#2ac1ff]/30 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <LayoutGrid className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Garaje</span>
+            </button>
+
+            {/* Mantenimiento button */}
+            <button
+              onClick={() => {
+                setActiveScreen("mantenimientos");
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "mantenimientos"
+                  ? "text-primary-fixed-dim bg-white/5 border border-[#2ac1ff]/30 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Wrench className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Mantenimiento</span>
+            </button>
+
+            {/* Talleres button */}
+            <button
+              onClick={() => {
+                setActiveScreen("talleres");
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "talleres"
+                  ? "text-primary-fixed-dim bg-white/5 border border-[#2ac1ff]/30 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <MapPin className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Talleres</span>
+            </button>
+
+            {/* Guantera button */}
+            <button
+              onClick={() => {
+                setActiveScreen("documentos");
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "documentos"
+                  ? "text-primary-fixed-dim bg-white/5 border border-[#2ac1ff]/30 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <FileText className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Guantera</span>
+            </button>
+
+            {/* Perfil button */}
+            <button
+              onClick={() => {
+                setActiveScreen("perfil");
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "perfil"
+                  ? "text-primary-fixed-dim bg-white/5 border border-[#2ac1ff]/30 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <User className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Perfil</span>
+            </button>
+          </nav>
+
+          {/* DESKTOP SIDEBAR - STICKY AND PERSISTENT */}
+          <nav className="hidden md:flex md:sticky md:top-24 md:z-10 md:w-64 md:flex-col md:justify-start md:items-stretch gap-3 px-4 py-5 bg-[#11141a]/60 border border-white/5 rounded-2xl shrink-0 h-fit">
+            <div className="px-3 pb-3 border-b border-white/5 mb-2">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#2ac1ff] font-extrabold block">MENÚ PRINCIPAL</span>
             </div>
             
+            {/* Garaje button */}
             <button
               onClick={() => {
                 setActiveScreen("garaje");
                 setIsRegistering(false);
                 setSelectedDetailVehicleId(null);
               }}
-              aria-label="Ver garaje de vehículos activos"
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+              className={`flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
                 activeScreen === "garaje"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+                  ? "text-primary-fixed-dim bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
               }`}
             >
-              <LayoutGrid className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Garaje</span>
+              <LayoutGrid className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Garaje</span>
             </button>
 
+            {/* Mantenimiento button */}
             <button
-              onClick={() => setActiveScreen("talleres")}
-              aria-label="Buscar talleres mecánicos cercanos"
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+              onClick={() => {
+                setActiveScreen("mantenimientos");
+              }}
+              className={`flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
+                activeScreen === "mantenimientos"
+                  ? "text-primary-fixed-dim bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Wrench className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Mantenimiento</span>
+            </button>
+
+            {/* Talleres button */}
+            <button
+              onClick={() => {
+                setActiveScreen("talleres");
+              }}
+              className={`flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
                 activeScreen === "talleres"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+                  ? "text-primary-fixed-dim bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
               }`}
             >
-              <Wrench className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Talleres</span>
+              <MapPin className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Talleres</span>
             </button>
 
+            {/* Guantera/Documentos button */}
             <button
-              onClick={() => setActiveScreen("documentos")}
-              aria-label="Ver mis documentos"
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+              onClick={() => {
+                setActiveScreen("documentos");
+              }}
+              className={`flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
                 activeScreen === "documentos"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+                  ? "text-primary-fixed-dim bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
               }`}
             >
-              <FileText className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Documentos</span>
+              <FileText className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Guantera</span>
             </button>
 
+            {/* Perfil button */}
             <button
-              onClick={() => setActiveScreen("perfil")}
-              aria-label="Configurar perfil de usuario y telemetría"
-              className={`flex flex-col items-center justify-center py-1 px-4 gap-1 transition-all rounded-xl cursor-pointer md:flex-row md:items-center md:gap-3 md:py-2.5 md:px-4 md:justify-start w-full focus-visible:ring-2 focus-visible:ring-[#2ac1ff] outline-none ${
+              onClick={() => {
+                setActiveScreen("perfil");
+              }}
+              className={`flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all ${
                 activeScreen === "perfil"
-                  ? "text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(42,193,255,0.5)] scale-[1.02] font-semibold md:bg-primary-fixed-dim/10 md:border md:border-primary-fixed-dim/20"
-                  : "text-on-surface-variant hover:text-white md:hover:bg-white/5"
+                  ? "text-primary-fixed-dim bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 font-bold"
+                  : "text-on-surface-variant hover:text-white hover:bg-white/5"
               }`}
             >
-              <User className="h-5 w-5 shrink-0" />
-              <span className="font-mono text-[9px] md:text-xs tracking-widest md:tracking-wider font-bold uppercase mt-0.5 md:mt-0">Perfil</span>
+              <User className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
+              <span className="font-mono text-xs tracking-wider uppercase">Perfil</span>
             </button>
           </nav>
 
           {/* Main Content Viewport */}
           <main className="flex-1 max-w-2xl mx-auto w-full md:mx-0">
             {/* Dynamic Warning Notification / Info Bar */}
-            {(error || infoMessage) && (
+            {error || infoMessage ? (
               <div className="mb-6 animate-fade-in max-w-2xl mx-auto">
                 {error ? (
                   <div className="flex items-center gap-2.5 rounded-lg bg-red-500/10 border border-red-500/30 p-4 text-xs font-semibold text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
@@ -1387,7 +1511,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Dynamic Display of active screen */}
             <div className="mx-auto max-w-2xl">
@@ -1407,148 +1531,7 @@ export default function App() {
                         currentProfile={carProfile}
                       />
                     </div>
-                  ) : selectedDetailVehicleId ? (() => {
-                    const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
-                    if (!currentVeh) {
-                      setSelectedDetailVehicleId(null);
-                      return null;
-                    }
-
-                    const vehTasks = vehiclesTasksMap[currentVeh.id || ""] || [];
-                    const vehTracking = vehiclesTrackingMap[currentVeh.id || ""] || [];
-                    const lifelineScore = calculateVehicleLifeline(currentVeh, vehTasks, vehTracking);
-
-                    const overallStatusColor = getVehiclesOverallColor(currentVeh, vehTasks, vehTracking);
-                    let lifelineColor = "bg-emerald-500";
-                    let lifelineText = "text-emerald-400";
-                    let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
-                    if (overallStatusColor === "danger") {
-                      lifelineColor = "bg-red-500";
-                      lifelineText = "text-red-400 font-bold animate-pulse";
-                      lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
-                    } else if (overallStatusColor === "warning") {
-                      lifelineColor = "bg-amber-500";
-                      lifelineText = "text-amber-400";
-                      lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
-                    }
-
-                    const isMotoType = currentVeh.vehicleType === "Moto";
-
-                    return (
-                      <div className="animate-fade-in flex flex-col gap-6">
-                        {/* Back navigation header */}
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => setSelectedDetailVehicleId(null)}
-                            className="py-2 px-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
-                          >
-                            <span>Volver al Garaje</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setSelectedDetailVehicleId(null);
-                              setCarProfile(currentVeh);
-                              setIsRegistering(true);
-                            }}
-                            className="py-1.5 px-3.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
-                          >
-                            Editar Vehículo
-                          </button>
-                        </div>
-
-                        {/* Complete Vehicle Details Summary Panel */}
-                        <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden group">
-                          <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-[#2ac1ff]/10 to-transparent rounded-bl-full pointer-events-none" />
-                          <SVGTachometer isMoto={isMotoType} />
-                          
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-start gap-4">
-                              <div className="p-3.5 rounded-xl bg-[#2ac1ff]/15 border border-[#2ac1ff]/30 text-[#2ac1ff] shrink-0">
-                                {isMotoType ? <Bike className="h-7 w-7" /> : <Car className="h-7 w-7" />}
-                              </div>
-                              <div className="space-y-1">
-                                <h3 className="font-sans font-black text-xl text-white uppercase tracking-tight">
-                                  {currentVeh.makeModel}
-                                </h3>
-                                <p className="text-xs text-on-surface-variant font-mono">
-                                  {currentVeh.vehicleType} · {currentVeh.fuelType} · {currentVeh.year}
-                                </p>
-                                {currentVeh.vin && (
-                                  <p className="text-[10px] text-[#2ac1ff] font-mono font-semibold uppercase">
-                                    Nº Bastidor (VIN): {currentVeh.vin}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Circular Lifeline Metric */}
-                            <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0 min-w-[150px]">
-                              <div className="flex justify-between w-full text-xs font-mono">
-                                <span className="text-on-surface-variant">Línea de vida útil:</span>
-                                <span className={`${lifelineText} font-black`}>{lifelineScore}%</span>
-                              </div>
-                              <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${lifelineColor} ${lifelineGlow}`}
-                                  style={{ width: `${lifelineScore}%` }}
-                                />
-                              </div>
-                              <p className="text-[8px] text-on-surface-variant font-mono uppercase tracking-wider">Métrica de desgaste acumulado</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Dedicated Quick Telemetry Odometer Calibration Form */}
-                        <div className="glass-card p-4 rounded-xl border border-white/10 space-y-3">
-                          <div className="flex items-center gap-2 text-left">
-                            <Gauge className="h-4 w-4 text-[#2ac1ff]" />
-                            <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                              Calibración Rápida de Odómetro (Telemetría Activa)
-                            </span>
-                          </div>
-
-                          <form 
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              const updatedUserKm = Number(newOdo);
-                              if (isNaN(updatedUserKm) || updatedUserKm <= 0) return;
-                              handleUpdateOdometerVal(updatedUserKm, currentVeh);
-                            }} 
-                            className="flex gap-2.5 items-end text-left"
-                          >
-                            <div className="flex-1 flex flex-col gap-1">
-                              <label className="font-mono text-[9px] font-bold text-on-surface-variant uppercase">Lectura del cuentakilómetros real</label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={newOdo}
-                                onChange={(e) => setNewOdo(e.target.value)}
-                                className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] focus:outline-none"
-                                placeholder={currentVeh.currentKm.toString()}
-                              />
-                            </div>
-                            <button
-                              type="submit"
-                              className="py-2.5 px-4 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 text-black font-semibold font-sans text-xs rounded-lg active:scale-95 transition-all cursor-pointer h-[38px] uppercase tracking-wider shrink-0"
-                            >
-                              Calibrar KM
-                            </button>
-                          </form>
-                        </div>
-
-                        {/* Interactive Task Tracker for Selected Vehicle Details */}
-                        <TaskTracker
-                          tasks={tasks}
-                          tracking={tracking}
-                          car={currentVeh}
-                          onUpdateTracking={handleUpdateTracking}
-                          onUpdateTasks={handleUpdateTasks}
-                          onResetAll={handleResetAll}
-                        />
-                      </div>
-                    );
-                  })() : (
+                  ) : (
                     /* General List of Registered Vehicles - basic cards only */
                     <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md">
                       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
@@ -1575,7 +1558,7 @@ export default function App() {
                       ) : (
                         <div className="grid grid-cols-1 gap-3.5">
                           {vehicles.map((veh) => {
-                            const isSelected = carProfile?.id === veh.id;
+                            const isSelected = selectedDetailVehicleId === veh.id;
                             const vehTasks = vehiclesTasksMap[veh.id || ""] || [];
                             const vehTracking = vehiclesTrackingMap[veh.id || ""] || [];
                             const lifelineScore = calculateVehicleLifeline(veh, vehTasks, vehTracking);
@@ -1603,6 +1586,7 @@ export default function App() {
                                   selectVehicle(veh);
                                   setSelectedDetailVehicleId(veh.id || null);
                                   setNewOdo(veh.currentKm.toString());
+                                  setActiveScreen("mantenimientos");
                                 }}
                                 className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer text-left overflow-hidden ${
                                   isSelected
@@ -1676,6 +1660,167 @@ export default function App() {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {activeScreen === "mantenimientos" && (
+                <div className="animate-fade-in flex flex-col gap-6">
+                  {!selectedDetailVehicleId || vehicles.length === 0 ? (
+                    <div className="glass-card p-10 rounded-2xl border border-white/10 text-center space-y-4">
+                      <div className="p-4 bg-[#2ac1ff]/10 rounded-full w-fit mx-auto border border-[#2ac1ff]/20">
+                        <Wrench className="h-8 w-8 text-[#2ac1ff]" />
+                      </div>
+                      <h3 className="font-sans font-black text-lg text-white uppercase tracking-tight">Sin vehículo seleccionado</h3>
+                      <p className="text-xs text-on-surface-variant font-mono max-w-sm mx-auto leading-relaxed">
+                        Selecciona o registra un vehículo desde el Garaje para ver sus planes de mantenimiento y telemetría de vida útil.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setActiveScreen("garaje");
+                          setIsRegistering(false);
+                          setSelectedDetailVehicleId(null);
+                        }}
+                        className="py-2.5 px-5 bg-[#2ac1ff] hover:bg-[#2ac1ff]/90 text-black font-semibold text-xs font-sans rounded-xl transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_15px_rgba(42,193,255,0.2)]"
+                      >
+                        Ir al Garaje
+                      </button>
+                    </div>
+                  ) : (() => {
+                    const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
+                    if (!currentVeh) {
+                      return (
+                        <div className="text-center py-8 text-on-surface-variant text-xs font-mono">
+                          Vehículo no encontrado. Por favor, selecciona uno en el Garaje.
+                        </div>
+                      );
+                    }
+
+                    const vehTasks = vehiclesTasksMap[currentVeh.id || ""] || [];
+                    const vehTracking = vehiclesTrackingMap[currentVeh.id || ""] || [];
+                    const lifelineScore = calculateVehicleLifeline(currentVeh, vehTasks, vehTracking);
+
+                    const overallStatusColor = getVehiclesOverallColor(currentVeh, vehTasks, vehTracking);
+                    let lifelineColor = "bg-emerald-500";
+                    let lifelineText = "text-emerald-400";
+                    let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
+                    if (overallStatusColor === "danger") {
+                      lifelineColor = "bg-red-500";
+                      lifelineText = "text-red-400 font-bold animate-pulse";
+                      lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+                    } else if (overallStatusColor === "warning") {
+                      lifelineColor = "bg-amber-500";
+                      lifelineText = "text-amber-400";
+                      lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
+                    }
+
+                    const isMotoType = currentVeh.vehicleType === "Moto";
+
+                    return (
+                      <div className="animate-fade-in flex flex-col gap-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-sans font-black text-base text-[#2ac1ff] uppercase tracking-tight">Plan de Mantenimiento</h3>
+                          <button
+                            onClick={() => {
+                              setCarProfile(currentVeh);
+                              setIsRegistering(true);
+                              setActiveScreen("garaje");
+                            }}
+                            className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#2ac1ff]/30 text-white hover:text-[#2ac1ff] text-[10.5px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          >
+                            Editar Ficha
+                          </button>
+                        </div>
+
+                        {/* Complete Vehicle Details Summary Panel */}
+                        <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-[#2ac1ff]/10 to-transparent rounded-bl-full pointer-events-none" />
+                          <SVGTachometer isMoto={isMotoType} />
+                          
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                              <div className="p-3.5 rounded-xl bg-[#2ac1ff]/15 border border-[#2ac1ff]/30 text-[#2ac1ff] shrink-0">
+                                {isMotoType ? <Bike className="h-7 w-7" /> : <Car className="h-7 w-7" />}
+                              </div>
+                              <div className="space-y-1">
+                                <h3 className="font-sans font-black text-xl text-white uppercase tracking-tight">
+                                  {currentVeh.makeModel}
+                                </h3>
+                                <p className="text-xs text-on-surface-variant font-mono">
+                                  {currentVeh.vehicleType} · {currentVeh.fuelType} · {currentVeh.year}
+                                </p>
+                                {currentVeh.vin && (
+                                  <p className="text-[10px] text-[#2ac1ff] font-mono font-semibold uppercase">
+                                    Nº Bastidor (VIN): {currentVeh.vin}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0 min-w-[150px]">
+                              <div className="flex justify-between w-full text-xs font-mono">
+                                <span className="text-on-surface-variant">Línea de vida útil:</span>
+                                <span className={`${lifelineText} font-black`}>{lifelineScore}%</span>
+                              </div>
+                              <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${lifelineColor} ${lifelineGlow}`}
+                                  style={{ width: `${lifelineScore}%` }}
+                                />
+                              </div>
+                              <p className="text-[8px] text-on-surface-variant font-mono uppercase tracking-wider">Métrica de desgaste acumulado</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Telemetry Odometer Calibration Form */}
+                        <div className="glass-card p-4 rounded-xl border border-white/10 space-y-3">
+                          <div className="flex items-center gap-2 text-left">
+                            <Gauge className="h-4 w-4 text-[#2ac1ff]" />
+                            <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                              Calibración Rápida de Odómetro (Telemetría Activa)
+                            </span>
+                          </div>
+
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const updatedUserKm = Number(newOdo);
+                              if (isNaN(updatedUserKm) || updatedUserKm <= 0) return;
+                              handleUpdateOdometerVal(updatedUserKm, currentVeh);
+                            }} 
+                            className="flex gap-2.5 items-end text-left"
+                          >
+                            <div className="flex-1 flex flex-col gap-1">
+                              <label className="font-mono text-[9px] font-bold text-on-surface-variant uppercase">Lectura del cuentakilómetros real</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={newOdo}
+                                onChange={(e) => setNewOdo(e.target.value)}
+                                className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] focus:outline-none"
+                                placeholder={currentVeh.currentKm.toString()}
+                              />
+                            </div>
+                            <button
+                              type="submit"
+                              className="py-2.5 px-4 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 text-black font-semibold font-sans text-xs rounded-lg active:scale-95 transition-all cursor-pointer h-[38px] uppercase tracking-wider shrink-0"
+                            >
+                              Calibrar KM
+                            </button>
+                          </form>
+                        </div>
+
+                        <TaskTracker
+                          tasks={tasks}
+                          tracking={tracking}
+                          car={currentVeh}
+                          onUpdateTracking={handleUpdateTracking}
+                          onUpdateTasks={handleUpdateTasks}
+                          onResetAll={handleResetAll}
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

@@ -47,7 +47,6 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
   const [year, setYear] = useState<number>(2024);
   const [currentKm, setCurrentKm] = useState<string>("");
   const [monthlyKm, setMonthlyKm] = useState<number>(1000);
-  const [vin, setVin] = useState("");
 
   // New slider and input fields for "ÚLTIMO MANTENIMIENTO"
   const [lastMaintMonths, setLastMaintMonths] = useState<number>(6);
@@ -60,7 +59,6 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
   useEffect(() => {
     if (currentProfile) {
       setVehicleType(currentProfile.vehicleType || "Coche");
-      setVin(currentProfile.vin || "");
       // Split brand and model if saved as joined makeModel
       const parts = currentProfile.makeModel.includes("-")
         ? currentProfile.makeModel.split("-")
@@ -116,8 +114,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
       fuelType,
       year: Number(year),
       currentKm: finalKm,
-      monthlyKm: Number(monthlyKm),
-      vin: vin.trim() || undefined
+      monthlyKm: Number(monthlyKm)
     }, true, lastMaintMonths, finalLastKm);
   };
 
@@ -381,23 +378,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
           </div>
 
-          {/* VIN optional field */}
-          <div className="flex flex-col gap-1.5 pt-1.5">
-            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
-              <span>NÚMERO DE BASTIDOR (VIN)</span>
-              <span className="text-[9px] font-mono text-primary-fixed-dim uppercase bg-primary-fixed-dim/5 px-2 py-0.5 rounded border border-primary-fixed-dim/10 tracking-widest font-extrabold select-none">
-                PRECI_OK
-              </span>
-            </label>
-            <input
-              type="text"
-              placeholder="Número de bastidor de 17 caracteres (opcional)"
-              value={vin}
-              onChange={(e) => setVin(e.target.value.toUpperCase())}
-              maxLength={17}
-              className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white font-mono uppercase tracking-widest focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all placeholder-primary-600/50"
-            />
-          </div>
+
 
         </section>
 

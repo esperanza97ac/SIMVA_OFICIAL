@@ -1,4 +1,4 @@
-import { Bell, Clock, AlertTriangle, AlertCircle, CheckCircle, ShieldAlert } from "lucide-react";
+import { Bell, Clock, AlertTriangle, AlertCircle, CheckCircle, ShieldAlert, Menu } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { SimvaLogo } from "./SimvaLogo";
 
@@ -15,9 +15,10 @@ interface HeaderProps {
   hasCar: boolean;
   carName?: string;
   notifications?: NotificationItem[];
+  onMenuToggle?: () => void;
 }
 
-export default function Header({ hasCar, carName, notifications = [] }: HeaderProps) {
+export default function Header({ hasCar, carName, notifications = [], onMenuToggle }: HeaderProps) {
   const [time, setTime] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -54,6 +55,16 @@ export default function Header({ hasCar, carName, notifications = [] }: HeaderPr
   return (
     <header className="fixed top-0 left-0 w-full z-50 h-16 flex justify-between items-center px-6 bg-black/60 backdrop-blur-xl border-b border-white/10">
       <div className="flex items-center gap-2.5">
+        {onMenuToggle && (
+          <button 
+            type="button" 
+            onClick={onMenuToggle}
+            className="md:hidden p-1.5 rounded-lg border border-white/10 text-white hover:bg-white/5 active:scale-95 transition-all cursor-pointer mr-1"
+            title="Abrir Menú"
+          >
+            <Menu className="h-4.5 w-4.5" />
+          </button>
+        )}
         <SimvaLogo className="h-6.5 w-6.5 shrink-0" />
         <h1 className="font-sans text-lg font-black tracking-widest text-white leading-none">SIMVA</h1>
         {hasCar && (
