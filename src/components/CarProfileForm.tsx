@@ -47,6 +47,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
   const [year, setYear] = useState<number>(2024);
   const [currentKm, setCurrentKm] = useState<string>("");
   const [monthlyKm, setMonthlyKm] = useState<number>(1000);
+  const [vin, setVin] = useState("");
 
   // New slider and input fields for "ÚLTIMO MANTENIMIENTO"
   const [lastMaintMonths, setLastMaintMonths] = useState<number>(6);
@@ -80,6 +81,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
       setYear(currentProfile.year);
       setCurrentKm(currentProfile.currentKm.toString());
       setMonthlyKm(currentProfile.monthlyKm || 1000);
+      setVin(currentProfile.vin || "");
       setLegalChecked(true);
     }
   }, [currentProfile]);
@@ -114,7 +116,8 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
       fuelType,
       year: Number(year),
       currentKm: finalKm,
-      monthlyKm: Number(monthlyKm)
+      monthlyKm: Number(monthlyKm),
+      vin: vin.trim() || undefined
     }, true, lastMaintMonths, finalLastKm);
   };
 
@@ -186,13 +189,8 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
           {/* Brand dropdown */}
           <div className="flex flex-col gap-1.5 relative">
-            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
-              <span>MARCA DEL VEHÍCULO</span>
-              {brand && (
-                <span className="text-[10px] text-primary-fixed-dim/85 font-mono normal-case tracking-normal">
-                  Filtro registrado en España
-                </span>
-              )}
+            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+              MARCA DEL VEHÍCULO
             </label>
             <div className="relative w-full">
               <input
@@ -332,27 +330,16 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
-                  className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white appearance-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all cursor-pointer"
+                  className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white appearance-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all cursor-pointer font-sans"
                 >
-                  <option value={2026}>2026</option>
-                  <option value={2025}>2025</option>
-                  <option value={2024}>2024</option>
-                  <option value={2023}>2023</option>
-                  <option value={2022}>2022</option>
-                  <option value={2021}>2021</option>
-                  <option value={2020}>2020</option>
-                  <option value={2019}>2019</option>
-                  <option value={2018}>2018</option>
-                  <option value={2017}>2017</option>
-                  <option value={2016}>2016</option>
-                  <option value={2015}>2015</option>
-                  <option value={2014}>2014</option>
-                  <option value={2013}>2013</option>
-                  <option value={2012}>2012</option>
-                  <option value={2011}>2011</option>
-                  <option value={2010}>2010</option>
-                  <option value={2009}>2009</option>
-                  <option value={2008}>2008</option>
+                  {Array.from({ length: (new Date().getFullYear() || 2026) - 1995 + 1 }, (_, i) => {
+                    const y = (new Date().getFullYear() || 2026) - i;
+                    return (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    );
+                  })}
                 </select>
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
                   <ChevronDown className="h-4 w-4" />
@@ -376,6 +363,22 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
               />
             </div>
 
+          </div>
+
+          {/* VIN input field (optional but recommended) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="font-mono text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+              <span>NÚMERO DE BASTIDOR (VIN)</span>
+              <span className="text-[10px] text-primary-fixed-dim font-mono normal-case tracking-normal">Opcional pero recomendado</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Introduce el VIN (17 caracteres)..."
+              maxLength={17}
+              value={vin}
+              onChange={(e) => setVin(e.target.value.toUpperCase())}
+              className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white font-mono uppercase focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all placeholder-primary-600/50"
+            />
           </div>
 
 
@@ -461,22 +464,23 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* Months elapsed slider */}
+            {/* Months elapsed manual number input */}
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wide">
                 HACE CUÁNTOS MESES
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <input
-                  type="range"
+                  type="number"
                   min="0"
-                  max="24"
+                  max="120"
+                  placeholder="Ej: 6"
                   value={lastMaintMonths}
-                  onChange={(e) => setLastMaintMonths(Number(e.target.value))}
-                  className="flex-1 accent-primary-fixed-dim h-1 bg-primary-900 rounded-lg appearance-none cursor-pointer"
+                  onChange={(e) => setLastMaintMonths(Number(e.target.value) || 0)}
+                  className="w-full bg-black border border-outline-variant duration-150 rounded-lg p-3 text-sm text-white font-mono focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim outline-none transition-all placeholder-primary-600"
                 />
-                <span className="font-mono text-sm font-semibold text-primary-fixed-dim w-10 text-center shrink-0">
-                  {lastMaintMonths}m
+                <span className="font-mono text-sm font-semibold text-primary-fixed-dim shrink-0 pr-1 select-none">
+                  meses
                 </span>
               </div>
             </div>

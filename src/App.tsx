@@ -762,6 +762,7 @@ export default function App() {
       currentKm: Number(profile.currentKm) || 0,
       monthlyKm: Number(profile.monthlyKm) || 0,
       year: Number(profile.year) || 0,
+      vin: profile.vin ? String(profile.vin) : undefined,
     };
 
     setCarProfile(cleanProfile);

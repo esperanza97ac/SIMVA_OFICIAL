@@ -363,53 +363,77 @@ Si no encuentras el dato exacto o manual de taller de este modelo en tus fuentes
 
 Tu respuesta debe ser un objeto JSON con el siguiente esquema: "plan" (el arreglo de objetos de tareas en español).`;
 
-    const response = await client.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            plan: {
-              type: Type.ARRAY,
-              description: "Arreglo de tareas de mantenimiento ordenadas de menor a mayor kilometraje.",
-              items: {
+    let result: any = null;
+    let attempt = 0;
+    const maxRetries = 2;
+    const models = ["gemini-3.5-flash", "gemini-3.1-flash-lite"];
+    let lastError: any = null;
+
+    for (const model of models) {
+      for (attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          console.log(`[GEMINI-API] Intentando generar plan con modelo: ${model} (Intento ${attempt + 1}/${maxRetries})...`);
+          const response = await client.models.generateContent({
+            model: model,
+            contents: prompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
                 type: Type.OBJECT,
                 properties: {
-                  tarea: {
-                    type: Type.STRING,
-                    description: "Nombre de la tarea de mantenimiento en español.",
-                  },
-                  cada_km: {
-                    type: Type.INTEGER,
-                    description: "Periodicidad en kilómetros. 0 si no aplica kilometraje.",
-                  },
-                  cada_meses: {
-                    type: Type.INTEGER,
-                    description: "Periodicidad en meses. 0 si no aplica tiempo.",
-                  },
+                  plan: {
+                    type: Type.ARRAY,
+                    description: "Arreglo de tareas de mantenimiento ordenadas de menor a mayor kilometraje.",
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        tarea: {
+                          type: Type.STRING,
+                          description: "Nombre de la tarea de mantenimiento en español.",
+                        },
+                        cada_km: {
+                          type: Type.INTEGER,
+                          description: "Periodicidad en kilómetros. 0 si no aplica kilometraje.",
+                        },
+                        cada_meses: {
+                          type: Type.INTEGER,
+                          description: "Periodicidad en meses. 0 si no aplica tiempo.",
+                        },
+                      },
+                      required: ["tarea", "cada_km", "cada_meses"],
+                    },
+                  }
                 },
-                required: ["tarea", "cada_km", "cada_meses"],
+                required: ["plan"],
               },
-            }
-          },
-          required: ["plan"],
-        },
-      },
-    });
+            },
+          });
 
-    const text = response.text;
-    if (!text) {
-      throw new Error("No se recibió respuesta válida del modelo Gemini.");
+          const text = response.text;
+          if (text) {
+            result = JSON.parse(text.trim());
+            break;
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[GEMINI-API] Advertencia: Intento fallido con ${model} (${attempt + 1}/${maxRetries}): ${err.message || err}`);
+          if (attempt < maxRetries - 1) {
+            const delay = Math.pow(2, attempt) * 1000;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        }
+      }
+      if (result) break;
     }
 
-    const result = JSON.parse(text.trim());
-    const plan = result.plan || [];
+    if (!result) {
+      throw lastError || new Error("No se obtuvo respuesta de ningún modelo de IA.");
+    }
 
+    const plan = result.plan || [];
     return res.json({ plan, isFallback: false });
   } catch (error: any) {
-    console.error("Error calling Gemini API:", error);
+    console.warn("[GEMINI-API] Servicio temporalmente saturado o no disponible. Iniciando recuperación pasiva con plan por defecto. Mensaje:", error.message || error);
     // Safe standard fallback based on fuel type and brand
     const fallbackPlan = getIndustryFallbackPlan(fuelType, vehicleType);
     return res.status(200).json({

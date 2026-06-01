@@ -9,6 +9,7 @@ export interface CarProfile {
   year: number;
   currentKm: number;
   monthlyKm: number;
+  vin?: string;
 }
 
 export interface MaintenanceTask {
