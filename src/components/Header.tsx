@@ -81,12 +81,6 @@ export default function Header({ hasCar, carName, notifications = [], onMenuTogg
           <span>{time}</span>
         </div>
 
-        {/* Database indicator */}
-        <div className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Telemetría Conectada</span>
-        </div>
-
         {/* Notifications Bell and Dropdown Container */}
         <div className="relative">
           <button 
