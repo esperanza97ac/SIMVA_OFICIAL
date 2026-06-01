@@ -1,5 +1,4 @@
 import { useState, FormEvent } from "react";
-import { motion } from "motion/react";
 import { 
   Wrench, 
   Trash2, 
@@ -298,65 +297,78 @@ export default function TaskTracker({
     <div className="flex flex-col gap-6 font-sans">
       
       {/* Metrics Banner */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Metric 1: Fleet Odometer with Neon Blue */}
-        <div className="col-span-2 sm:col-span-1 garage-panel flex items-center justify-between rounded-xl px-4 py-3 border-l-4 border-accent-gold shadow-[0_0_15px_rgba(0,210,255,0.08)]">
-          <div className="flex flex-col text-left">
-            <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-wider text-primary-400">LECTURA ODOMETER</span>
-            <span className="font-mono text-xl sm:text-2xl font-black text-white mt-1 uppercase tracking-tight">
+        <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-accent-gold shadow-[0_0_15px_rgba(0,210,255,0.08)]">
+          <div className="flex flex-col">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-primary-400">LECTURA ODOMETER</span>
+            <span className="font-mono text-2xl font-black text-white mt-1 uppercase tracking-tight">
               {car.currentKm.toLocaleString("es-ES")} <span className="text-xs text-accent-gold font-bold neon-glow-blue">KM</span>
             </span>
           </div>
-          <Gauge className="h-6 w-6 sm:h-8 sm:w-8 text-accent-gold animate-pulse shrink-0" />
+          <Gauge className="h-8 w-8 text-accent-gold animate-pulse" />
         </div>
 
-        {/* Metric 2: Warning Alerts (🟡 Cuidado / Atenciones en Rango) */}
-        <div className="col-span-1 garage-panel flex items-center justify-between rounded-xl px-3 py-2 border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.05)] text-left">
+        {/* Metric 2: Warning Alerts (🟡 Cuidado / Atenciones en Rango 500km - 1000km) */}
+        <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-amber-500">ADVERTENCIA</span>
-            <span className="font-mono text-lg sm:text-2xl font-black text-amber-400 mt-0.5 uppercase tracking-tight leading-tight">
-              {warningCount} <span className="text-[10px] sm:text-xs text-amber-500 font-sans font-medium">Tareas</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-amber-500">ADVERTENCIA (500 - 1000 KM)</span>
+            <span className="font-mono text-2xl font-black text-amber-400 mt-1 uppercase tracking-tight">
+              {warningCount} <span className="text-xs text-amber-500 font-sans font-medium">Tareas</span>
             </span>
           </div>
-          <div className="relative shrink-0">
-            <div className="absolute inset-0 bg-amber-500 rounded-full blur-md opacity-30 animate-ping h-5 w-5 sm:h-6 sm:w-6" />
-            <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500 relative" />
+          <div className="relative">
+            <div className="absolute inset-0 bg-amber-500 rounded-full blur-md opacity-40 animate-ping h-8 w-8" />
+            <AlertTriangle className="h-8 w-8 text-amber-500 relative" />
           </div>
         </div>
 
-        {/* Metric 3: Critical alerts Overdue (🔴 Peligro inmediato!) */}
-        <div className="col-span-1 garage-panel flex items-center justify-between rounded-xl px-3 py-2 border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.05)] text-left">
+        {/* Metric 3: Critical alerts Overdue (🔴 Peligro inmediato! <500km) */}
+        <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[8px] sm:text-[10px] uppercase tracking-wider text-red-550">PELIGRO CRÍTICO</span>
-            <span className="font-mono text-lg sm:text-2xl font-black text-red-400 mt-0.5 uppercase tracking-tight leading-tight">
-              {criticalCount} <span className="text-[10px] sm:text-xs text-red-500 font-sans font-medium">Urgentes</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-red-550">PELIGRO CRÍTICO (&lt;500 KM)</span>
+            <span className="font-mono text-2xl font-black text-red-400 mt-1 uppercase tracking-tight">
+              {criticalCount} <span className="text-xs text-red-500 font-sans font-medium">Urgentes</span>
             </span>
           </div>
-          <div className="relative shrink-0">
-            <motion.div
-              animate={{ 
-                scale: [1, 1.15, 1],
-                rotate: [0, -6, 6, -6, 6, 0] 
-              }}
-              transition={{ 
-                duration: 1.8, 
-                repeat: Infinity, 
-                repeatType: "reverse" as const,
-                ease: "easeInOut"
-              }}
-            >
-              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-            </motion.div>
+          <div className="relative">
+            <div className="absolute inset-0 bg-red-500 rounded-full blur-md opacity-50 animate-pulse h-8 w-8" />
+            <div className="h-8 w-8 bg-red-950/40 rounded-full flex items-center justify-center border border-red-500 text-red-400 font-mono text-xs font-bold leading-none animate-pulse">
+              !
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Global Alerts Summary */}
+      {(criticalCount > 0 || warningCount > 0) && (
+        <div className="rounded-xl bg-red-950/30 border border-red-900/40 p-5 flex items-start gap-3.5 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5 animate-bounce" />
+          <div className="flex flex-col gap-1 text-left">
+            <h4 className="font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-amber-400 text-sm tracking-wide uppercase">
+              REPORTE DE DIAGNÓSTICO EN ESTILO SEMÁFORO
+            </h4>
+            <div className="text-xs text-primary-300 space-y-1.5 mt-1 font-sans">
+              {criticalCount > 0 && (
+                <p>• Alarma de <span className="text-red-400 font-bold uppercase underline">Rojo Peligro (&lt; 500 km disponibles):</span> Tienes <strong className="text-red-400 font-extrabold">{criticalCount} repuestos o tareas críticas</strong> en estado crítico peligroso.</p>
+              )}
+              {warningCount > 0 && (
+                <p>• Aviso en <span className="text-amber-400 font-bold uppercase">Ámbar (Entre 500 km y 1.000 km restantes):</span> Tienes <strong className="text-amber-400 font-extrabold">{warningCount} elementos preventivos</strong> en rango de advertencia.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Control Actions Panel */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-primary-950/40 p-3.5 rounded-xl border border-primary-900">
         <div className="flex items-center gap-2">
           <Wrench className="h-4.5 w-4.5 text-accent-gold" />
+          <h3 className="font-display text-sm font-bold text-white uppercase tracking-wider">
+            Línea de Vida y Desgaste de Repuestos
+          </h3>
           <span className="rounded bg-primary-800 px-2.5 py-0.5 font-mono text-[11px] font-bold text-accent-gold">
-            {tasks.length} repuestos
+            {tasks.length} piezas
           </span>
         </div>
 
@@ -530,51 +542,28 @@ export default function TaskTracker({
                     </div>
                   </div>
 
-                  {/* 🚦 Semáforo de estado y kilómetros/meses restantes agrupados en bloque compacto */}
-                  <div className="flex flex-col items-end gap-1 shrink-0 bg-[#11151f]/80 p-1.5 sm:p-2 rounded-xl border border-primary-800 shadow-inner" title="Semáforo y kilometraje restante">
-                    {/* Semáforo LED lights */}
-                    <div className="flex items-center gap-1 select-none">
-                      {/* Red light */}
-                      <div className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
-                        statusColor === "danger" 
-                          ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,1)] animate-pulse" 
-                          : "bg-red-950/45 border border-red-900/40"
-                      }`} />
-                      
-                      {/* Yellow light */}
-                      <div className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
-                        statusColor === "warning" 
-                          ? "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,1)] animate-pulse" 
-                          : "bg-amber-950/45 border border-amber-900/40"
-                      }`} />
+                  {/* 🚦 Estilo SEMÁFORO (Traffic Light LED Panel) */}
+                  <div className="flex items-center gap-1.5 rounded-lg bg-[#11151f] p-1.5 border border-primary-800 shadow-inner shrink-0" title="Semáforo de estado">
+                    {/* Red light (Danger / <4000km) */}
+                    <div className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                      statusColor === "danger" 
+                        ? "bg-red-500 shadow-[0_0_12px_rgba(239,68,68,1)] animate-pulse" 
+                        : "bg-red-950/45 border border-red-900/40"
+                    }`} />
+                    
+                    {/* Yellow light (Precaución / 4000km - 6000km) */}
+                    <div className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                      statusColor === "warning" 
+                        ? "bg-amber-400 shadow-[0_0_12px_rgba(245,158,11,1)] animate-pulse" 
+                        : "bg-amber-950/45 border border-amber-900/40"
+                    }`} />
 
-                      {/* Green light */}
-                      <div className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
-                        statusColor === "ok" 
-                          ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,1)]" 
-                          : "bg-emerald-950/45 border border-emerald-900/40"
-                      }`} />
-                    </div>
-
-                    {/* Kilómetros/Meses restantes compactos */}
-                    <div className="text-right">
-                      <span className="font-mono text-[7.5px] text-primary-450 uppercase block select-none leading-none tracking-wider font-bold">Restan</span>
-                      <span className={`font-mono text-[10.5px] sm:text-xs font-black block mt-0.5 leading-none tracking-tight ${
-                        isCaducado || statusColor === "danger"
-                          ? "text-red-400 animate-pulse font-black"
-                          : statusColor === "warning"
-                          ? "text-amber-400 font-black"
-                          : "text-emerald-400 font-black"
-                      }`}>
-                        {task.cada_km > 0 ? (
-                          kmRemaining <= 0 
-                            ? "Excedido" 
-                            : `${kmRemaining.toLocaleString("es-ES")} km`
-                        ) : (
-                          formattedMonthsRemaining <= 0 ? "Expirado" : `${formattedMonthsRemaining} mes${formattedMonthsRemaining !== 1 ? 'es' : ''}`
-                        )}
-                      </span>
-                    </div>
+                    {/* Green light (OK / >6000km) */}
+                    <div className={`h-3 w-3 rounded-full transition-all duration-300 ${
+                      statusColor === "ok" 
+                        ? "bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,1)]" 
+                        : "bg-emerald-950/45 border border-emerald-900/40"
+                    }`} />
                   </div>
                 </div>
 
@@ -634,8 +623,8 @@ export default function TaskTracker({
                   </div>
                 </div>
 
-                {/* Calculations for remaining targets (Hidden on small viewports to prioritize grouped top stats) */}
-                <div className="mt-4 hidden sm:grid grid-cols-2 gap-3 bg-[#11151e] p-3 rounded-xl border border-primary-850">
+                {/* Calculations for remaining targets (Timeline items con meses redondos) */}
+                <div className="mt-4 grid grid-cols-2 gap-3 bg-[#11151e] p-3 rounded-xl border border-primary-850">
                   <div className="flex flex-col text-left">
                     <span className="font-mono text-[9px] uppercase tracking-wider text-primary-400">Restan Kilómetros</span>
                     {task.cada_km > 0 ? (
