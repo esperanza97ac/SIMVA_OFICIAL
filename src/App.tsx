@@ -15,7 +15,7 @@ import MisDocumentos from "./components/MisDocumentos";
 
 // Firebase integration
 import { auth, db, handleFirestoreError, OperationType } from "./firebase";
-import { onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
+import { onAuthStateChanged, signOut, User as FirebaseUser, EmailAuthProvider, GoogleAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { doc, getDoc, getDocs, setDoc, collection, writeBatch } from "firebase/firestore";
 import AuthScreen from "./components/AuthScreen";
 
@@ -325,6 +325,9 @@ export default function App() {
     return localStorage.getItem("simva_fcm_token");
   });
   const [fcmSupport, setFcmSupport] = useState<boolean | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteReauthError, setDeleteReauthError] = useState<string | null>(null);
 
   const requestPushPermissionAndRegister = async () => {
     if (!("Notification" in window)) {
@@ -1066,15 +1069,49 @@ export default function App() {
   const handleDeleteAccount = async () => {
     if (!currentUser) return;
 
-    const doubleConfirm = window.confirm(
-      "¿ESTÁS COMPLETAMENTE SEGURO de que deseas eliminar tu cuenta permanentemente?\n\nEsta acción borrará irrevocablemente tu vehículo, tus tareas, tus historiales, tus documentos, fotos e informes y tu cuenta de acceso de forma inmediata. No podrás recuperar tus datos."
-    );
-
-    if (!doubleConfirm) return;
-
     setIsLoading(true);
+    setDeleteReauthError(null);
     setError(null);
     setInfoMessage(null);
+
+    const providerId = currentUser.providerData[0]?.providerId || "";
+    const isGoogle = providerId === "google.com";
+
+    // 1. Proactive re-authentication based on login provider (prevents auth/requires-recent-login errors)
+    if (isGoogle) {
+      try {
+        const provider = new GoogleAuthProvider();
+        await reauthenticateWithPopup(currentUser, provider);
+      } catch (reauthErr: any) {
+        console.error("Reauthentication with Google failed:", reauthErr);
+        if (reauthErr.code === "auth/popup-closed-by-user") {
+          setDeleteReauthError("La ventana de autenticación con Google fue cerrada antes de completarse.");
+        } else {
+          setDeleteReauthError("Error de re-autenticación: Por favor, inténtalo de nuevo para confirmar la baja.");
+        }
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      if (!deletePassword) {
+        setDeleteReauthError("Introduce tu contraseña de acceso para autorizar la eliminación permanente de tu cuenta.");
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const credential = EmailAuthProvider.credential(currentUser.email!, deletePassword);
+        await reauthenticateWithCredential(currentUser, credential);
+      } catch (reauthErr: any) {
+        console.error("Reauthentication with email/password failed:", reauthErr);
+        if (reauthErr.code === "auth/wrong-password" || reauthErr.code === "auth/invalid-credential") {
+          setDeleteReauthError("La contraseña introducida es incorrecta. Por favor, verifícala.");
+        } else {
+          setDeleteReauthError("Error al verificar credenciales: " + (reauthErr.message || reauthErr));
+        }
+        setIsLoading(false);
+        return;
+      }
+    }
 
     try {
       const batch = writeBatch(db);
@@ -1122,11 +1159,16 @@ export default function App() {
       setVehicles([]);
       setTasks([]);
       setTracking([]);
+      
+      // Clear local confirm and reauthentication state
+      setShowDeleteConfirm(false);
+      setDeletePassword("");
+      setDeleteReauthError(null);
 
-      // 6. Delete the user authentication record
+      // 6. Delete the user authentication record in Firebase Auth
       await currentUser.delete();
 
-      setInfoMessage("Tu cuenta y todos tus datos han sido eliminados de forma permanente.");
+      setInfoMessage("Tu cuenta y todos tus datos han sido eliminados de forma permanente de los servidores de SIMVA.");
       setTimeout(() => {
         setInfoMessage(null);
         setActiveScreen("garaje");
@@ -1134,14 +1176,8 @@ export default function App() {
       }, 3500);
 
     } catch (err: any) {
-      console.error("Error deleting account:", err);
-      if (err.code === "auth/requires-recent-login") {
-        setError(
-          "Para eliminar tu cuenta por seguridad es necesario que vuelvas a iniciar sesión recientemente. Cierra sesión y entra de nuevo para completar la operación."
-        );
-      } else {
-        setError("Error al eliminar la cuenta de usuario. Por favor, inténtalo de nuevo.");
-      }
+      console.error("Error deleting database or authentication records:", err);
+      setError("Error crítico durante el borrado de la cuenta. Por favor, ponte en contacto con asistencia.");
     } finally {
       setIsLoading(false);
     }
@@ -1294,6 +1330,97 @@ export default function App() {
     <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-16 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
       <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+
+      {/* Confirmation Modal Container for Account Deletion */}
+      {showDeleteConfirm && (() => {
+        const providerId = currentUser?.providerData[0]?.providerId || "";
+        const isGoogle = providerId === "google.com";
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="glass-card max-w-md w-full p-6 rounded-2xl border border-red-500/30 bg-[#151a22] shadow-[0_0_30px_rgba(239,68,68,0.2)] text-left space-y-4">
+              <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+                <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 animate-pulse" />
+                <h3 className="font-sans font-black text-base text-red-400 uppercase tracking-tight">¿Eliminar tu cuenta?</h3>
+              </div>
+              
+              <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                Esta acción es irreversible y borrará inmediatamente de forma definitiva toda tu telemetría, vehículos de tu garaje, tareas completadas, historiales, fotos de documentos e informes asociados a tu cuenta <span className="text-[#2ac1ff] font-mono">{currentUser?.email}</span>.
+              </p>
+
+              <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 text-[11px] font-semibold text-red-300 leading-normal">
+                ¿Estás seguro de que deseas proceder? Esta acción no se puede deshacer.
+              </div>
+
+              {/* Re-authentication Segment based on Authentication Provider */}
+              <div className="border-t border-white/5 pt-3 space-y-3">
+                <span className="font-mono text-[9px] font-bold text-red-400/90 uppercase tracking-widest block">
+                  Confirmación de Seguridad Requerida
+                </span>
+
+                {isGoogle ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-gray-400 leading-normal">
+                      Has accedido a SIMVA mediante Google Auth. Para la baja definitiva, se abrirá la ventana de re-autenticación de Google al pulsar el botón de confirmación abajo.
+                    </p>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-xl border border-white/5 text-[11.5px] text-gray-300 font-mono">
+                      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+                      </svg>
+                      <span className="truncate">{currentUser?.email}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-gray-400 leading-normal">
+                      Por motivos de seguridad, introduce tu contraseña actual de acceso para confirmar la eliminación definitiva de tu cuenta:
+                    </p>
+                    <input
+                      type="password"
+                      required
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Escribe tu contraseña de SIMVA"
+                      className="w-full bg-black border border-white/10 rounded-xl py-2 px-3 text-xs text-white focus:border-red-500/50 outline-none transition-all font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Specific local reauthentication error */}
+              {deleteReauthError && (
+                <div className="p-3 bg-red-400/10 border border-red-500/20 text-red-300 rounded-xl text-[11px] font-medium leading-normal animate-pulse">
+                  {deleteReauthError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeletePassword("");
+                    setDeleteReauthError(null);
+                  }}
+                  className="py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  className="py-2 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                >
+                  Sí, eliminar definitivamente
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Main container with responsive layouts */}
       {!currentUser ? (
@@ -2009,8 +2136,8 @@ export default function App() {
                           Limpiar Datos
                         </button>
                         <button
-                          onClick={handleDeleteAccount}
-                          className="py-1.5 px-3 bg-red-600/15 hover:bg-red-600/25 border border-red-500/20 text-red-100 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="py-1.5 px-3 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                         >
                           Eliminar Cuenta
                         </button>
