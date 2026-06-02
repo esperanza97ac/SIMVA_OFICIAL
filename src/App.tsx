@@ -1290,11 +1290,12 @@ export default function App() {
           }
         }
 
+        const typeLabel = veh.vehicleType?.toLowerCase() === "moto" ? "moto" : "coche";
         if (statusColor === "danger") {
           list.push({
             id: `${veh.id}-${task.id}-danger`,
             type: "danger",
-            message: `⚠️ Aviso de SIMVA: Tu coche te pide una revisión de ${task.tarea.toLowerCase()} cuanto antes`,
+            message: `⚠️ Aviso de SIMVA: Tu ${typeLabel} (${veh.makeModel}) requiere revisar urgentemente: ${task.tarea.toLowerCase()} cuanto antes.`,
             vehicleName: veh.makeModel,
             taskName: task.tarea,
             timestampText: "Hace 2 días" // 1 vez cada 3 días
@@ -1303,7 +1304,7 @@ export default function App() {
           list.push({
             id: `${veh.id}-${task.id}-warning`,
             type: "warning",
-            message: `SIMVA detectó una anomalía leve. Echa un vistazo a ${task.tarea.toLowerCase()} antes de tu próximo viaje largo.`,
+            message: `SIMVA detectó una alerta leve: revisa ${task.tarea.toLowerCase()} en tu ${typeLabel} (${veh.makeModel}) antes de emprender un viaje largo.`,
             vehicleName: veh.makeModel,
             taskName: task.tarea,
             timestampText: "Hace 6 días" // 1 vez cada semana
@@ -1803,166 +1804,369 @@ export default function App() {
                 </div>
               )}
 
-              {activeScreen === "mantenimientos" && (
-                <div className="animate-fade-in flex flex-col gap-6">
-                  {!selectedDetailVehicleId || vehicles.length === 0 ? (
-                    <div className="glass-card p-10 rounded-2xl border border-white/10 text-center space-y-4">
-                      <div className="p-4 bg-[#2ac1ff]/10 rounded-full w-fit mx-auto border border-[#2ac1ff]/20">
-                        <Wrench className="h-8 w-8 text-[#2ac1ff]" />
+              {activeScreen === "mantenimientos" && (() => {
+                const fleetStatuses = vehicles.map(veh => {
+                  const vehTasks = vehiclesTasksMap[veh.id || ""] || [];
+                  const vehTracking = vehiclesTrackingMap[veh.id || ""] || [];
+                  const status = getVehiclesOverallColor(veh, vehTasks, vehTracking);
+                  return { veh, status };
+                });
+
+                const criticalVehicles = fleetStatuses.filter(f => f.status === "danger");
+                const warningVehicles = fleetStatuses.filter(f => f.status === "warning");
+                const okayVehicles = fleetStatuses.filter(f => f.status !== "danger" && f.status !== "warning");
+
+                return (
+                  <div className="animate-fade-in flex flex-col gap-6">
+                    {vehicles.length === 0 ? (
+                      <div className="glass-card p-10 rounded-2xl border border-white/10 text-center space-y-4">
+                        <div className="p-4 bg-[#2ac1ff]/10 rounded-full w-fit mx-auto border border-[#2ac1ff]/20">
+                          <Wrench className="h-8 w-8 text-[#2ac1ff]" />
+                        </div>
+                        <h3 className="font-sans font-black text-lg text-white uppercase tracking-tight">Sin vehículos registrados</h3>
+                        <p className="text-xs text-on-surface-variant font-mono max-w-sm mx-auto leading-relaxed">
+                          Registra un vehículo en tu garaje electrónico para ver su estado y plan de mantenimiento.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setActiveScreen("garaje");
+                            setIsRegistering(true);
+                            setCarProfile(null);
+                          }}
+                          className="py-2.5 px-5 bg-[#2ac1ff] hover:bg-[#2ac1ff]/90 text-black font-semibold text-xs font-sans rounded-xl transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_15px_rgba(42,193,255,0.2)]"
+                        >
+                          Registrar Vehículo
+                        </button>
                       </div>
-                      <h3 className="font-sans font-black text-lg text-white uppercase tracking-tight">Sin vehículo seleccionado</h3>
-                      <p className="text-xs text-on-surface-variant font-mono max-w-sm mx-auto leading-relaxed">
-                        Selecciona o registra un vehículo desde el Garaje para ver sus planes de mantenimiento y telemetría de vida útil.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setActiveScreen("garaje");
-                          setIsRegistering(false);
-                          setSelectedDetailVehicleId(null);
-                        }}
-                        className="py-2.5 px-5 bg-[#2ac1ff] hover:bg-[#2ac1ff]/90 text-black font-semibold text-xs font-sans rounded-xl transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_15px_rgba(42,193,255,0.2)]"
-                      >
-                        Ir al Garaje
-                      </button>
-                    </div>
-                  ) : (() => {
-                    const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
-                    if (!currentVeh) {
-                      return (
-                        <div className="text-center py-8 text-on-surface-variant text-xs font-mono">
-                          Vehículo no encontrado. Por favor, selecciona uno en el Garaje.
-                        </div>
-                      );
-                    }
+                    ) : (
+                      <>
+                        {/* Fleet health status card requested by the user */}
+                        <div className="glass-card p-5 rounded-2xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left">
+                          <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
+                            <div>
+                              <h3 className="font-sans font-black text-[#2ac1ff] uppercase tracking-tight text-sm flex items-center gap-2">
+                                <Sliders className="h-4.5 w-4.5 text-[#2ac1ff]" />
+                                <span>Resumen de Alertas y Diagnóstico de Flota</span>
+                              </h3>
+                              <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">
+                                Estado predictivo de todos los vehículos registrados
+                              </p>
+                            </div>
+                            <div className="font-mono text-[9px] text-[#2ac1ff]/90 bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                              {vehicles.length} {vehicles.length === 1 ? "Vehículo" : "Vehículos"}
+                            </div>
+                          </div>
 
-                    const vehTasks = vehiclesTasksMap[currentVeh.id || ""] || [];
-                    const vehTracking = vehiclesTrackingMap[currentVeh.id || ""] || [];
-                    const lifelineScore = calculateVehicleLifeline(currentVeh, vehTasks, vehTracking);
-
-                    const overallStatusColor = getVehiclesOverallColor(currentVeh, vehTasks, vehTracking);
-                    let lifelineColor = "bg-emerald-500";
-                    let lifelineText = "text-emerald-400";
-                    let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
-                    if (overallStatusColor === "danger") {
-                      lifelineColor = "bg-red-500";
-                      lifelineText = "text-red-400 font-bold animate-pulse";
-                      lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
-                    } else if (overallStatusColor === "warning") {
-                      lifelineColor = "bg-amber-500";
-                      lifelineText = "text-amber-400";
-                      lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
-                    }
-
-                    const isMotoType = currentVeh.vehicleType === "Moto";
-
-                    return (
-                      <div className="animate-fade-in flex flex-col gap-6">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-sans font-black text-base text-[#2ac1ff] uppercase tracking-tight">Plan de Mantenimiento</h3>
-                          <button
-                            onClick={() => {
-                              setCarProfile(currentVeh);
-                              setIsRegistering(true);
-                              setActiveScreen("garaje");
-                            }}
-                            className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#2ac1ff]/30 text-white hover:text-[#2ac1ff] text-[10.5px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
-                          >
-                            Editar Ficha
-                          </button>
-                        </div>
-
-                        {/* Complete Vehicle Details Summary Panel */}
-                        <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden group">
-                          <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-[#2ac1ff]/10 to-transparent rounded-bl-full pointer-events-none" />
-                          <SVGTachometer isMoto={isMotoType} />
-                          
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-start gap-4">
-                              <div className="p-3.5 rounded-xl bg-[#2ac1ff]/15 border border-[#2ac1ff]/30 text-[#2ac1ff] shrink-0">
-                                {isMotoType ? <Bike className="h-7 w-7" /> : <Car className="h-7 w-7" />}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* 🔴 Sección de Peligro Crítico */}
+                            <div className="bg-red-500/5 hover:bg-red-500/[0.08] duration-200 border border-red-500/20 rounded-xl p-4 flex flex-col gap-3 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-red-500 font-bold text-[11px] uppercase tracking-wider font-mono">
+                                  <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                                  <span>Peligro Crítico</span>
+                                </div>
+                                <span className="bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-[10px] px-1.5 py-0.5 rounded-md font-bold">
+                                  {criticalVehicles.length}
+                                </span>
                               </div>
-                              <div className="space-y-1">
-                                <h3 className="font-sans font-black text-xl text-white uppercase tracking-tight">
-                                  {currentVeh.makeModel}
-                                </h3>
-                                <p className="text-xs text-on-surface-variant font-mono">
-                                  {currentVeh.vehicleType} · {currentVeh.fuelType} · {currentVeh.year}
-                                </p>
-                                {currentVeh.vin && (
-                                  <p className="text-[10px] text-[#2ac1ff] font-mono font-semibold uppercase">
-                                    Nº Bastidor (VIN): {currentVeh.vin}
+
+                              {criticalVehicles.length === 0 ? (
+                                <div className="py-2.5 text-center">
+                                  <p className="text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
+                                    🟢 Sin Alertas Críticas
                                   </p>
-                                )}
-                              </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
+                                  {criticalVehicles.map(({ veh }) => {
+                                    const isSelected = selectedDetailVehicleId === veh.id;
+                                    return (
+                                      <div
+                                        key={veh.id}
+                                        onClick={() => {
+                                          selectVehicle(veh);
+                                          setSelectedDetailVehicleId(veh.id || null);
+                                          setNewOdo(veh.currentKm.toString());
+                                        }}
+                                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
+                                          isSelected
+                                            ? "bg-red-500/20 border-red-400 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                                            : "bg-black/40 border-red-500/20 text-white/90 hover:bg-red-500/10 hover:border-red-500/40"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-red-400 shrink-0">⚠️</span>
+                                          <div className="text-left">
+                                            <p className="font-sans font-extrabold text-[12px] uppercase leading-tight">
+                                              {veh.makeModel}
+                                            </p>
+                                            <p className="text-[9px] text-[#2ac1ff] font-mono leading-none mt-0.5">
+                                              {veh.vin ? `VIN: ${veh.vin}` : "Sin VIN"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          <span className="text-[9px] font-mono font-bold bg-black/60 px-1.5 py-0.5 rounded text-red-400 border border-red-400/20">
+                                            {veh.currentKm.toLocaleString("es-ES")} KMs
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setActiveScreen("talleres");
+                                            }}
+                                            className="py-1 px-2.5 bg-[#2ac1ff]/20 hover:bg-[#2ac1ff]/35 text-[#2ac1ff] hover:text-white border border-[#2ac1ff]/35 hover:border-[#2ac1ff]/60 text-[9px] font-mono font-bold rounded transition-all cursor-pointer uppercase tracking-wider"
+                                            title="Buscar taller mecánico para este vehículo"
+                                          >
+                                            Buscar Taller
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
 
-                            <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0 min-w-[150px]">
-                              <div className="flex justify-between w-full text-xs font-mono">
-                                <span className="text-on-surface-variant">Línea de vida útil:</span>
-                                <span className={`${lifelineText} font-black`}>{lifelineScore}%</span>
+                            {/* 🟡 Sección de Advertencia */}
+                            <div className="bg-amber-500/5 hover:bg-amber-500/[0.08] duration-200 border border-amber-500/20 rounded-xl p-4 flex flex-col gap-3 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-amber-500 font-bold text-[11px] uppercase tracking-wider font-mono">
+                                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                                  <span>Advertencia</span>
+                                </div>
+                                <span className="bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono text-[10px] px-1.5 py-0.5 rounded-md font-bold">
+                                  {warningVehicles.length}
+                                </span>
                               </div>
-                              <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${lifelineColor} ${lifelineGlow}`}
-                                  style={{ width: `${lifelineScore}%` }}
-                                />
-                              </div>
-                              <p className="text-[8px] text-on-surface-variant font-mono uppercase tracking-wider">Métrica de desgaste acumulado</p>
+
+                              {warningVehicles.length === 0 ? (
+                                <div className="py-2.5 text-center">
+                                  <p className="text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
+                                    ⭐ Sin Advertencias
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
+                                  {warningVehicles.map(({ veh }) => {
+                                    const isSelected = selectedDetailVehicleId === veh.id;
+                                    return (
+                                      <div
+                                        key={veh.id}
+                                        onClick={() => {
+                                          selectVehicle(veh);
+                                          setSelectedDetailVehicleId(veh.id || null);
+                                          setNewOdo(veh.currentKm.toString());
+                                        }}
+                                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
+                                          isSelected
+                                            ? "bg-amber-500/20 border-amber-400 text-white shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                            : "bg-black/40 border-amber-500/20 text-white/90 hover:bg-amber-500/10 hover:border-amber-500/40"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-amber-400 shrink-0">🔧</span>
+                                          <div className="text-left">
+                                            <p className="font-sans font-extrabold text-[12px] uppercase leading-tight">
+                                              {veh.makeModel}
+                                            </p>
+                                            <p className="text-[9px] text-[#2ac1ff] font-mono leading-none mt-0.5">
+                                              {veh.vin ? `VIN: ${veh.vin}` : "Sin VIN"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <span className="text-[9px] font-mono font-bold bg-black/60 px-1.5 py-0.5 rounded text-amber-400 border border-amber-400/20">
+                                          {veh.currentKm.toLocaleString("es-ES")} KMs
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           </div>
+
+                          {/* 🟢 Sección de Vehículos Correctos */}
+                          {okayVehicles.length > 0 && (
+                            <div className="border-t border-white/5 pt-3.5 mt-3 flex flex-wrap items-center gap-2">
+                              <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                                Vehículos Al Día:
+                              </span>
+                              {okayVehicles.map(({ veh }) => {
+                                const isSelected = selectedDetailVehicleId === veh.id;
+                                return (
+                                  <button
+                                    key={veh.id}
+                                    type="button"
+                                    onClick={() => {
+                                      selectVehicle(veh);
+                                      setSelectedDetailVehicleId(veh.id || null);
+                                      setNewOdo(veh.currentKm.toString());
+                                    }}
+                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-mono font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                      isSelected
+                                        ? "bg-emerald-500/20 border-emerald-400 text-white"
+                                        : "bg-emerald-950/20 border-emerald-500/10 text-emerald-300 hover:border-emerald-500/30"
+                                    }`}
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    <span>{veh.makeModel}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Quick Telemetry Odometer Calibration Form */}
-                        <div className="glass-card p-4 rounded-xl border border-white/10 space-y-3">
-                          <div className="flex items-center gap-2 text-left">
-                            <Gauge className="h-4 w-4 text-[#2ac1ff]" />
-                            <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                              Calibración Rápida de Odómetro (Telemetría Activa)
-                            </span>
+                        {/* Detail of selected vehicle */}
+                        {!selectedDetailVehicleId ? (
+                          <div className="glass-card p-6 rounded-2xl border border-white/10 text-center">
+                            <p className="text-xs text-on-surface-variant font-mono">
+                              👇 Selecciona un vehículo de las listas de arriba para ver su plan de trabajo detallado.
+                            </p>
                           </div>
+                        ) : (() => {
+                          const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
+                          if (!currentVeh) {
+                            return (
+                              <div className="text-center py-6 text-on-surface-variant text-xs font-mono">
+                                Vehículo no encontrado.
+                              </div>
+                            );
+                          }
 
-                          <form 
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              const updatedUserKm = Number(newOdo);
-                              if (isNaN(updatedUserKm) || updatedUserKm <= 0) return;
-                              handleUpdateOdometerVal(updatedUserKm, currentVeh);
-                            }} 
-                            className="flex gap-2.5 items-end text-left"
-                          >
-                            <div className="flex-1 flex flex-col gap-1">
-                              <label className="font-mono text-[9px] font-bold text-on-surface-variant uppercase">Lectura del cuentakilómetros real</label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={newOdo}
-                                onChange={(e) => setNewOdo(e.target.value)}
-                                className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] focus:outline-none"
-                                placeholder={currentVeh.currentKm.toString()}
+                          const vehTasks = vehiclesTasksMap[currentVeh.id || ""] || [];
+                          const vehTracking = vehiclesTrackingMap[currentVeh.id || ""] || [];
+                          const lifelineScore = calculateVehicleLifeline(currentVeh, vehTasks, vehTracking);
+
+                          const overallStatusColor = getVehiclesOverallColor(currentVeh, vehTasks, vehTracking);
+                          let lifelineColor = "bg-emerald-500";
+                          let lifelineText = "text-emerald-400";
+                          let lifelineGlow = "shadow-[0_0_10px_rgba(16,185,129,0.3)]";
+                          if (overallStatusColor === "danger") {
+                            lifelineColor = "bg-red-500";
+                            lifelineText = "text-red-400 font-bold animate-pulse";
+                            lifelineGlow = "shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+                          } else if (overallStatusColor === "warning") {
+                            lifelineColor = "bg-amber-500";
+                            lifelineText = "text-amber-400";
+                            lifelineGlow = "shadow-[0_0_10px_rgba(245,158,11,0.3)]";
+                          }
+
+                          const isMotoType = currentVeh.vehicleType === "Moto";
+
+                          return (
+                            <div className="animate-fade-in flex flex-col gap-6">
+                              <div className="flex items-center justify-between">
+                                <h3 className="font-sans font-black text-base text-[#2ac1ff] uppercase tracking-tight">Plan de Mantenimiento Detallado</h3>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCarProfile(currentVeh);
+                                    setIsRegistering(true);
+                                    setActiveScreen("garaje");
+                                  }}
+                                  className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#2ac1ff]/30 text-white hover:text-[#2ac1ff] text-[10.5px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                                >
+                                  Editar Ficha
+                                </button>
+                              </div>
+
+                              {/* Complete Vehicle Details Summary Panel */}
+                              <div className="glass-card p-5 rounded-2xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 h-24 w-24 bg-gradient-to-br from-[#2ac1ff]/10 to-transparent rounded-bl-full pointer-events-none" />
+                                <SVGTachometer isMoto={isMotoType} />
+                                
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                  <div className="flex items-start gap-4">
+                                    <div className="p-3.5 rounded-xl bg-[#2ac1ff]/15 border border-[#2ac1ff]/30 text-[#2ac1ff] shrink-0">
+                                      {isMotoType ? <Bike className="h-7 w-7" /> : <Car className="h-7 w-7" />}
+                                    </div>
+                                    <div className="space-y-1">
+                                      <h3 className="font-sans font-black text-xl text-white uppercase tracking-tight">
+                                        {currentVeh.makeModel}
+                                      </h3>
+                                      <p className="text-xs text-on-surface-variant font-mono">
+                                        {currentVeh.vehicleType} · {currentVeh.fuelType} · {currentVeh.year}
+                                      </p>
+                                      {currentVeh.vin && (
+                                        <p className="text-[10px] text-[#2ac1ff] font-mono font-semibold uppercase">
+                                          Nº Bastidor (VIN): {currentVeh.vin}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0 min-w-[150px]">
+                                    <div className="flex justify-between w-full text-xs font-mono">
+                                      <span className="text-on-surface-variant">Línea de vida útil:</span>
+                                      <span className={`${lifelineText} font-black`}>{lifelineScore}%</span>
+                                    </div>
+                                    <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-500 ${lifelineColor} ${lifelineGlow}`}
+                                        style={{ width: `${lifelineScore}%` }}
+                                      />
+                                    </div>
+                                    <p className="text-[8px] text-on-surface-variant font-mono uppercase tracking-wider">Métrica de desgaste acumulado</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Quick Telemetry Odometer Calibration Form */}
+                              <div className="glass-card p-4 rounded-xl border border-white/10 space-y-3">
+                                <div className="flex items-center gap-2 text-left">
+                                  <Gauge className="h-4 w-4 text-[#2ac1ff]" />
+                                  <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                    Calibración Rápida de Odómetro (Telemetría Activa)
+                                  </span>
+                                </div>
+
+                                <form 
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const updatedUserKm = Number(newOdo);
+                                    if (isNaN(updatedUserKm) || updatedUserKm <= 0) return;
+                                    handleUpdateOdometerVal(updatedUserKm, currentVeh);
+                                  }} 
+                                  className="flex gap-2.5 items-end text-left"
+                                >
+                                  <div className="flex-1 flex flex-col gap-1">
+                                    <label className="font-mono text-[9px] font-bold text-on-surface-variant uppercase">Lectura del cuentakilómetros real</label>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={newOdo}
+                                      onChange={(e) => setNewOdo(e.target.value)}
+                                      className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-xs text-white font-mono focus:border-[#2ac1ff] focus:outline-none"
+                                      placeholder={currentVeh.currentKm.toString()}
+                                    />
+                                  </div>
+                                  <button
+                                    type="submit"
+                                    className="py-2.5 px-4 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 text-black font-semibold font-sans text-xs rounded-lg active:scale-95 transition-all cursor-pointer h-[38px] uppercase tracking-wider shrink-0"
+                                  >
+                                    Calibrar KM
+                                  </button>
+                                </form>
+                              </div>
+
+                              <TaskTracker
+                                  tasks={tasks}
+                                  tracking={tracking}
+                                  car={currentVeh}
+                                  onUpdateTracking={handleUpdateTracking}
+                                  onUpdateTasks={handleUpdateTasks}
+                                  onResetAll={handleResetAll}
                               />
                             </div>
-                            <button
-                              type="submit"
-                              className="py-2.5 px-4 bg-[#2ac1ff] hover:bg-[#2ac1ff]/85 text-black font-semibold font-sans text-xs rounded-lg active:scale-95 transition-all cursor-pointer h-[38px] uppercase tracking-wider shrink-0"
-                            >
-                              Calibrar KM
-                            </button>
-                          </form>
-                        </div>
-
-                        <TaskTracker
-                          tasks={tasks}
-                          tracking={tracking}
-                          car={currentVeh}
-                          onUpdateTracking={handleUpdateTracking}
-                          onUpdateTasks={handleUpdateTasks}
-                          onResetAll={handleResetAll}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {activeScreen === "documentos" && (
                 <div className="animate-fade-in flex flex-col gap-6">
