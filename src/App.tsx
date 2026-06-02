@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from "react";
+import { motion } from "motion/react";
 import { 
   CarProfile, 
   MaintenanceTask, 
@@ -1862,7 +1863,20 @@ export default function App() {
                             <div className="bg-red-500/5 hover:bg-red-500/[0.08] duration-200 border border-red-500/20 rounded-xl p-4 flex flex-col gap-3 transition-colors">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5 text-red-500 font-bold text-[11px] uppercase tracking-wider font-mono">
-                                  <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                                  <motion.div
+                                    animate={{
+                                      scale: [1, 1.25, 1],
+                                      rotate: [0, -5, 5, 0]
+                                    }}
+                                    transition={{
+                                      duration: 1.5,
+                                      repeat: Infinity,
+                                      ease: "easeInOut"
+                                    }}
+                                    className="text-red-500 shrink-0"
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </motion.div>
                                   <span>Peligro Crítico</span>
                                 </div>
                                 <span className="bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-[10px] px-1.5 py-0.5 rounded-md font-bold">
@@ -2118,7 +2132,7 @@ export default function App() {
                                 <div className="flex items-center gap-2 text-left">
                                   <Gauge className="h-4 w-4 text-[#2ac1ff]" />
                                   <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                                    Calibración Rápida de Odómetro (Telemetría Activa)
+                                    Actualiza los KMs de tu vehículo
                                   </span>
                                 </div>
 
@@ -2132,7 +2146,6 @@ export default function App() {
                                   className="flex gap-2.5 items-end text-left"
                                 >
                                   <div className="flex-1 flex flex-col gap-1">
-                                    <label className="font-mono text-[9px] font-bold text-on-surface-variant uppercase">Lectura del cuentakilómetros real</label>
                                     <input
                                       type="number"
                                       min={0}

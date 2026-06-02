@@ -340,69 +340,37 @@ export default function TaskTracker({
         </div>
       </div>
 
-      {/* Global Alerts Summary */}
-      {(criticalCount > 0 || warningCount > 0) && (
-        <div className="rounded-xl bg-red-950/30 border border-red-900/40 p-5 flex items-start gap-3.5 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
-          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5 animate-bounce" />
-          <div className="flex flex-col gap-1 text-left">
-            <h4 className="font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-amber-400 text-sm tracking-wide uppercase">
-              REPORTE DE DIAGNÓSTICO EN ESTILO SEMÁFORO
-            </h4>
-            <div className="text-xs text-primary-300 space-y-1.5 mt-1 font-sans">
-              {criticalCount > 0 && (
-                <p>• Alarma de <span className="text-red-400 font-bold uppercase underline">Rojo Peligro (&lt; 500 km disponibles):</span> Tienes <strong className="text-red-400 font-extrabold">{criticalCount} repuestos o tareas críticas</strong> en estado crítico peligroso.</p>
-              )}
-              {warningCount > 0 && (
-                <p>• Aviso en <span className="text-amber-400 font-bold uppercase">Ámbar (Entre 500 km y 1.000 km restantes):</span> Tienes <strong className="text-amber-400 font-extrabold">{warningCount} elementos preventivos</strong> en rango de advertencia.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Control Actions Panel - Simplified button-bar with no bulky box */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5 mt-2 mb-4">
+        <button
+          id="print-plan-btn"
+          type="button"
+          onClick={handlePrint}
+          className="flex items-center gap-1.5 rounded-lg border border-primary-800 bg-primary-950/40 px-3 py-1.5 font-sans text-xs font-semibold text-primary-300 hover:bg-primary-900 hover:text-white transition-all cursor-pointer"
+        >
+          <Printer className="h-3.5 w-3.5" />
+          <span>Imprimir Ficha</span>
+        </button>
 
-      {/* Control Actions Panel */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-primary-950/40 p-3.5 rounded-xl border border-primary-900">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-4.5 w-4.5 text-accent-gold" />
-          <h3 className="font-display text-sm font-bold text-white uppercase tracking-wider">
-            Línea de Vida y Desgaste de Repuestos
-          </h3>
-          <span className="rounded bg-primary-800 px-2.5 py-0.5 font-mono text-[11px] font-bold text-accent-gold">
-            {tasks.length} piezas
-          </span>
-        </div>
+        <button
+          id="clear-all-data-btn"
+          type="button"
+          onClick={onResetAll}
+          className="flex items-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/10 px-3 py-1.5 font-sans text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-all cursor-pointer"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>Limpiar Datos</span>
+        </button>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            id="print-plan-btn"
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 rounded-lg border border-primary-800 bg-primary-950/40 px-3 py-1.5 font-sans text-xs font-semibold text-primary-300 hover:bg-primary-900 hover:text-white transition-all cursor-pointer"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>Imprimir Ficha</span>
-          </button>
-
-          <button
-            id="clear-all-data-btn"
-            type="button"
-            onClick={onResetAll}
-            className="flex items-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/10 px-3 py-1.5 font-sans text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-all cursor-pointer"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Limpiar Datos</span>
-          </button>
-
-          <button
-            id="toggle-add-form-btn"
-            type="button"
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent-gold hover:bg-cyan-400 px-3 py-1.5 font-sans text-xs font-black text-primary-950 shadow-[0_0_15px_rgba(0,210,255,0.2)] transition-all active:scale-98 cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5 stroke-[3]" />
-            <span>+ Personalizar Plan</span>
-          </button>
-        </div>
+        <button
+          id="toggle-add-form-btn"
+          type="button"
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="flex items-center gap-1.5 rounded-lg bg-accent-gold hover:bg-cyan-400 px-3 py-1.5 font-sans text-xs font-black text-primary-950 shadow-[0_0_15px_rgba(0,210,255,0.2)] transition-all active:scale-98 cursor-pointer"
+        >
+          <Plus className="h-3.5 w-3.5 stroke-[3]" />
+          <span>+ Personalizar Plan</span>
+        </button>
       </div>
 
       {/* Add Custom Task Form */}
