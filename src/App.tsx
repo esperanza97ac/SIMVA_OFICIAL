@@ -9,7 +9,7 @@ import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
-import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin, Pencil } from "lucide-react";
 import Talleres from "./components/Talleres";
 import MisDocumentos from "./components/MisDocumentos";
 
@@ -1738,11 +1738,11 @@ export default function App() {
                                         {veh.makeModel}
                                       </h4>
                                     </div>
-                                    <p className="text-[10px] text-on-surface-variant font-mono">
-                                      {veh.fuelType} · {veh.year} · VIN: {veh.vin || "No especificado"}
+                                    <p className="text-[10px] text-[#2ac1ff] font-mono uppercase tracking-wider">
+                                      {veh.vin ? `VIN: ${veh.vin}` : "Sin número de bastidor (VIN)"}
                                     </p>
                                     <p className="text-[10px] text-primary-fixed-dim font-mono font-bold">
-                                      Odómetro: {veh.currentKm.toLocaleString("es-ES")} KMs
+                                      {veh.currentKm.toLocaleString("es-ES")} KMs
                                     </p>
                                   </div>
                                 </div>
@@ -1762,8 +1762,20 @@ export default function App() {
                                   <p className="text-[8px] text-on-surface-variant font-mono uppercase tracking-wider">Métrica de desgaste</p>
                                 </div>
 
-                                {/* Quick delete vehicle anchor */}
-                                <div className="absolute right-2 top-2 sm:relative sm:right-auto sm:top-auto ml-0 sm:ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Action buttons: Edit & Delete */}
+                                <div className="absolute right-2 top-2 sm:relative sm:right-auto sm:top-auto ml-0 sm:ml-4 flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCarProfile(veh);
+                                      setIsRegistering(true);
+                                    }}
+                                    className="p-1.5 text-on-surface-variant hover:text-[#2ac1ff] hover:bg-[#2ac1ff]/10 rounded-md transition-all cursor-pointer"
+                                    title="Editar vehículo"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={(e) => {
