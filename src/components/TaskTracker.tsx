@@ -103,13 +103,7 @@ export default function TaskTracker({
     // Calculate custom wear percentage representing how much interval is consumed
     let wearPercentage = 0;
     if (task.cada_km > 0) {
-      if (track?.lastCompletedKm !== undefined) {
-        wearPercentage = Math.min(100, Math.max(0, (kmElapsed / task.cada_km) * 100));
-      } else {
-        // Standard cyclic estimation based on overall odometer if not logged
-        const currentCycleElapsed = odometro % task.cada_km;
-        wearPercentage = Math.min(100, Math.max(0, (currentCycleElapsed / task.cada_km) * 100));
-      }
+      wearPercentage = Math.min(100, Math.max(0, (kmElapsed / task.cada_km) * 100));
     } else if (task.cada_meses > 0 && track?.lastCompletedDate) {
       // Time-based fallback wear calculation
       const lastDate = new Date(track.lastCompletedDate);
@@ -128,11 +122,7 @@ export default function TaskTracker({
     let kmRemaining = 0;
 
     if (task.cada_km > 0) {
-      if (track && track.lastCompletedKm !== undefined) {
-        nextDueKm = track.lastCompletedKm + task.cada_km;
-      } else {
-        nextDueKm = Math.ceil((odometro + 1) / task.cada_km) * task.cada_km;
-      }
+      nextDueKm = lastDoneKm + task.cada_km;
       kmRemaining = nextDueKm - odometro;
     } else {
       kmRemaining = Infinity;

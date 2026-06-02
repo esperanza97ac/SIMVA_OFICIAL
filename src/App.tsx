@@ -46,12 +46,8 @@ export function calculateVehicleLifeline(
     const track = trackingList.find((tr) => tr.id === t.id);
     let kmRemaining = Infinity;
     if (t.cada_km > 0) {
-      let nextDueKm = 0;
-      if (track && track.lastCompletedKm !== undefined) {
-        nextDueKm = track.lastCompletedKm + t.cada_km;
-      } else {
-        nextDueKm = Math.ceil((car.currentKm + 1) / t.cada_km) * t.cada_km;
-      }
+      const baseKm = (track && track.lastCompletedKm !== undefined) ? track.lastCompletedKm : 0;
+      const nextDueKm = baseKm + t.cada_km;
       kmRemaining = nextDueKm - car.currentKm;
     }
 
@@ -132,12 +128,8 @@ export function getVehiclesOverallColor(
     const track = trackingList.find((t) => t.id === task.id);
     let kmRemaining = Infinity;
     if (task.cada_km > 0) {
-      let nextDueKm = 0;
-      if (track && track.lastCompletedKm !== undefined) {
-        nextDueKm = track.lastCompletedKm + task.cada_km;
-      } else {
-        nextDueKm = Math.ceil((car.currentKm + 1) / task.cada_km) * task.cada_km;
-      }
+      const baseKm = (track && track.lastCompletedKm !== undefined) ? track.lastCompletedKm : 0;
+      const nextDueKm = baseKm + task.cada_km;
       kmRemaining = nextDueKm - car.currentKm;
     }
 
@@ -327,6 +319,7 @@ export default function App() {
   });
   const [fcmSupport, setFcmSupport] = useState<boolean | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<CarProfile | null>(null);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteReauthError, setDeleteReauthError] = useState<string | null>(null);
 
@@ -460,7 +453,6 @@ export default function App() {
   };
 
   const deleteVehicle = async (vehicleId: string) => {
-    if (!window.confirm("¿Seguro que deseas eliminar definitivamente este vehículo del garaje?")) return;
     setIsLoading(true);
     try {
       const updatedList = vehicles.filter(v => v.id !== vehicleId);
@@ -769,8 +761,20 @@ export default function App() {
     setInfoMessage(null);
     setError(null);
 
+    const existingVeh = vehicles.find(v => v.id === vehicleId);
+    const didDetailsChange = !existingVeh || (
+      existingVeh.makeModel !== cleanProfile.makeModel ||
+      existingVeh.fuelType !== cleanProfile.fuelType ||
+      existingVeh.vehicleType !== cleanProfile.vehicleType
+    );
+
+    let actualFetch = shouldFetch;
+    if (existingVeh && !didDetailsChange) {
+      actualFetch = false;
+    }
+
     // If fetched, load recommended tasks
-    if (shouldFetch) {
+    if (actualFetch) {
       setIsLoading(true);
       try {
         const response = await fetch("/api/maintenance-plan", {
@@ -891,16 +895,22 @@ export default function App() {
         setIsLoading(false);
       }
     } else {
-      setInfoMessage("Lectura del odómetro guardada correctamente.");
+      const existingTasks = vehiclesTasksMap[vehicleId] || [];
+      const existingTracking = vehiclesTrackingMap[vehicleId] || [];
+
+      setTasks(existingTasks);
+      setTracking(existingTracking);
+
+      setInfoMessage("¡Vehículo guardado y plan de mantenimiento recalculado con éxito!");
       
-      let initialTracking: TaskTracking[] = [];
+      let initialTracking: TaskTracking[] = existingTracking;
       // Auto-reinitialize logs if they edited the vehicle settings manually
-      if (lastMaintKm !== undefined && lastMaintKm > 0 && tasks.length > 0) {
+      if (lastMaintKm !== undefined && lastMaintKm > 0 && existingTasks.length > 0) {
         const maintDate = new Date();
         maintDate.setMonth(maintDate.getMonth() - (lastMaintMonths || 6));
         const lastCompletedDate = maintDate.toISOString().split("T")[0];
 
-        initialTracking = tasks.map((t: any) => {
+        initialTracking = existingTasks.map((t: any) => {
           if (t.cada_km && t.cada_km <= 60000 && lastMaintKm <= profile.currentKm) {
             return {
               id: t.id,
@@ -916,10 +926,13 @@ export default function App() {
       }
 
       if (currentUser) {
-        if (lastMaintKm !== undefined && lastMaintKm > 0 && tasks.length > 0) {
+        if (lastMaintKm !== undefined && lastMaintKm > 0 && existingTasks.length > 0) {
           await saveTrackingToFirestore(currentUser.uid, vehicleId, initialTracking);
         }
       }
+
+      // Explicitly recalculate and trigger alerts transition immediately for updated odometer
+      await checkAndSendEmailAlerts(cleanProfile, existingTasks, initialTracking);
 
       // Navigate to Garaje tab
       setActiveScreen("garaje");
@@ -1191,7 +1204,14 @@ export default function App() {
       localStorage.setItem("simva_selected_vehicle_id", vehicle.id);
     }
 
-    setInfoMessage("¡Telemetría calibrada con éxito! Distancia de conducción de la unidad actualizada.");
+    const vehTasks = vehiclesTasksMap[vehicle.id!] || [];
+    const vehTracking = vehiclesTrackingMap[vehicle.id!] || [];
+
+    // Ensure state displays recalculated values instantly
+    setTasks(vehTasks);
+    setTracking(vehTracking);
+
+    setInfoMessage("¡Odómetro calibrado y mantenimiento recalculado con éxito!");
     
     if (currentUser && vehicle.id) {
       try {
@@ -1200,6 +1220,9 @@ export default function App() {
         console.error("Error updating odometer in DB:", err);
       }
     }
+
+    // Explicitly recalculate and trigger alert transition check immediately
+    await checkAndSendEmailAlerts(updated, vehTasks, vehTracking);
     
     setTimeout(() => setInfoMessage(null), 3500);
   };
@@ -1226,12 +1249,8 @@ export default function App() {
         // Solve for remaining parameters
         let kmRemaining = Infinity;
         if (task.cada_km > 0) {
-          let nextDueKm = 0;
-          if (track && track.lastCompletedKm !== undefined) {
-            nextDueKm = track.lastCompletedKm + task.cada_km;
-          } else {
-            nextDueKm = Math.ceil((odometro + 1) / task.cada_km) * task.cada_km;
-          }
+          const baseKm = (track && track.lastCompletedKm !== undefined) ? track.lastCompletedKm : 0;
+          const nextDueKm = baseKm + task.cada_km;
           kmRemaining = nextDueKm - odometro;
         }
 
@@ -1312,6 +1331,59 @@ export default function App() {
     <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-16 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
       <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+
+      {/* Confirmation Modal Container for Vehicle Deletion */}
+      {vehicleToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="glass-card max-w-sm w-full p-6 rounded-2xl border border-red-500/30 bg-[#151a22] shadow-[0_0_30px_rgba(239,68,68,0.2)] text-left space-y-4">
+            <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 animate-pulse" />
+              <h3 className="font-sans font-black text-sm text-red-400 uppercase tracking-tight">¿Eliminar vehículo?</h3>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Vehículo seleccionado:</p>
+              <p className="text-xs text-white font-extrabold uppercase font-sans tracking-tight bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+                {vehicleToDelete.makeModel}
+              </p>
+            </div>
+
+            <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
+              Esta acción es permanente e irreversible. Se eliminará el vehículo de tu garaje electrónico junto con todo su plan de mantenimiento, registro de tareas completadas e historial de alertas. No podrás recuperar estos datos.
+            </p>
+
+            <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 text-[10px] font-semibold text-red-300 leading-normal">
+              ¿Estás seguro de que deseas proceder con el borrado definitivo?
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setVehicleToDelete(null)}
+                className="py-2 px-3.5 bg-white/5 hover:bg-white/10 text-white hover:text-white border border-white/10 hover:border-white/20 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer uppercase tracking-wider"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (vehicleToDelete.id) {
+                    const id = vehicleToDelete.id;
+                    setVehicleToDelete(null); // Close modal first
+                    await deleteVehicle(id);
+                    if (selectedDetailVehicleId === id) {
+                      setSelectedDetailVehicleId(null);
+                    }
+                  }
+                }}
+                className="py-2 px-3.5 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-bold text-xs font-mono rounded-xl transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.25)]"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal Container for Account Deletion */}
       {showDeleteConfirm && (() => {
@@ -1761,12 +1833,7 @@ export default function App() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (veh.id) {
-                                        deleteVehicle(veh.id);
-                                        if (selectedDetailVehicleId === veh.id) {
-                                          setSelectedDetailVehicleId(null);
-                                        }
-                                      }
+                                      setVehicleToDelete(veh);
                                     }}
                                     className="p-1.5 text-on-surface-variant hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all cursor-pointer"
                                     title="Eliminar vehículo"
