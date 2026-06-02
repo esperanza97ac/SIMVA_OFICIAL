@@ -667,27 +667,6 @@ export default function App() {
         updatedMap[alertKey] = currentStatus;
         hasUpdatedAny = true;
 
-        try {
-          console.log(`Fitting request for send-alert-email: ${t.tarea} on ${veh.makeModel}`);
-          await fetch("/api/send-alert-email", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userEmail: currentUser.email,
-              vehicleName: veh.makeModel,
-              vehicleType: veh.vehicleType,
-              taskName: t.tarea,
-              status: currentStatus,
-              kmRemaining,
-              currentKm: veh.currentKm,
-            }),
-          });
-        } catch (error) {
-          console.error("Error communicating with email alert API:", error);
-        }
-
         // Real-time Push Notification trigger
         if (notiPush && fcmToken) {
           try {

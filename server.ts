@@ -3,7 +3,6 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import nodemailer from "nodemailer";
 import admin from "firebase-admin";
 
 // Load environment variables
@@ -51,124 +50,6 @@ function getAiClient() {
   }
   return aiClient;
 }
-
-// API endpoint to send maintenance alert emails
-app.post("/api/send-alert-email", async (req, res) => {
-  const { userEmail, vehicleName, vehicleType, taskName, status, kmRemaining, currentKm } = req.body;
-
-  if (!userEmail || !vehicleName || !taskName || !status) {
-    return res.status(450).json({ error: "Faltan datos obligatorios para enviar el aviso por email" });
-  }
-
-  const isDanger = status === "danger";
-  const statusLabel = isDanger ? "CRÍTICO (ROJO)" : "PREVENTIVO (ÁMBAR)";
-  const statusColorHex = isDanger ? "#ef4444" : "#f59e0b";
-  const vehTypeLabel = (vehicleType || "vehículo").toLowerCase();
-
-  const emailHtml = `
-    <div style="background-color: #0b0f19; color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; border-radius: 12px; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b;">
-      <div style="text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 15px; margin-bottom: 20px;">
-        <h1 style="color: #2ac1ff; font-size: 24px; margin: 0; text-transform: uppercase; letter-spacing: 2px;">SIMVA ALERTA</h1>
-        <p style="color: #64748b; font-size: 11px; margin: 5px 0 0 0; text-transform: uppercase; font-family: monospace;">SISTEMA INTELIGENTE DE MANTENIMIENTO VEHICULAR AUTOMOTRIZ</p>
-      </div>
-
-      <div style="background-color: #111827; border-left: 4px solid ${statusColorHex}; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="color: ${statusColorHex}; margin: 0 0 5px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">
-          NIVEL DE AVISO: ${statusLabel}
-        </h3>
-        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #cbd5e1;">
-          ¡Atención! En tu <strong>${vehTypeLabel} ${vehicleName}</strong>, se ha detectado el siguiente aviso de mantenimiento pendiente debido a desgaste o vencimiento: <strong>"${taskName}"</strong>.
-        </p>
-      </div>
-
-      <div style="background-color: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
-        <h4 style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase;">Detalles del Vehículo y Alerta</h4>
-        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-          <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">Tipo de Vehículo:</td>
-            <td style="color: #ffffff; font-weight: bold; text-align: right; padding: 4px 0; text-transform: capitalize;">${vehTypeLabel}</td>
-          </tr>
-          <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">Modelo de Vehículo:</td>
-            <td style="color: #ffffff; font-weight: bold; text-align: right; padding: 4px 0;">${vehicleName}</td>
-          </tr>
-          <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">Pieza / Filtro / Componente:</td>
-            <td style="color: #e2e8f0; font-weight: bold; text-align: right; padding: 4px 0; color: #fed7aa;">${taskName}</td>
-          </tr>
-          <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">Kilometraje Actual:</td>
-            <td style="color: #4ade80; font-weight: bold; font-family: monospace; text-align: right; padding: 4px 0;">${(currentKm || 0).toLocaleString("es-ES")} KMs</td>
-          </tr>
-          <tr>
-            <td style="color: #94a3b8; padding: 4px 0;">KMs Restantes para Cambio:</td>
-            <td style="color: ${statusColorHex}; font-weight: bold; font-family: monospace; text-align: right; padding: 4px 0;">
-              ${kmRemaining <= 0 ? "Excedido" : `${kmRemaining.toLocaleString("es-ES")} KMs`}
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="text-align: center;">
-        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">Por favor, programa una cita con tu taller de confianza lo antes posible para revisar tu <strong>${taskName}</strong>.</p>
-      </div>
-
-      <div style="border-top: 1px solid #1e293b; margin-top: 30px; padding-top: 15px; text-align: center; font-size: 11px; color: #64748b;">
-        Este es un correo automático provisto por el Módulo de IA y Telemetría de SIMVA.<br>
-        Recibes este aviso porque has configurado notificaciones automáticas para tu ${vehTypeLabel} ${vehicleName}.
-      </div>
-    </div>
-  `;
-
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-
-  const emailSubject = `⚠️ ALERTA SIMVA [${statusLabel}] - ${vehTypeLabel === "coche" ? "🚗 Coche" : "🏍️ Moto"} ${vehicleName}: requiere cambio de ${taskName}`;
-
-  if (smtpHost && smtpUser && smtpPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      await transporter.sendMail({
-        from: process.env.EMAILS_FROM || '"SIMVA Alertas" <alerts@simva.com>',
-        to: userEmail,
-        subject: emailSubject,
-        html: emailHtml,
-      });
-
-      console.log(`[EMAIL COMPLETO ENVIADO] Alerta para ${userEmail} enviada con éxito (pieza: ${taskName}).`);
-      return res.json({ success: true, method: "smtp", message: "Alerta de correo enviada satisfactoriamente con SMTP." });
-    } catch (err: any) {
-      console.error("Error sending real SMTP email:", err);
-    }
-  }
-
-  // Beautiful simulation output
-  console.log("\n" + "=".repeat(60));
-  console.log(`📧 [SIMVA ALERTA DE CORREO ELECTRONICO SIMULADO]`);
-  console.log(`Para:       ${userEmail}`);
-  console.log(`Asunto:     ${emailSubject}`);
-  console.log(`Vehículo:   ${vehTypeLabel === "coche" ? "🚗 Coche" : "🏍️ Moto"} ${vehicleName}`);
-  console.log(`Pieza:      ${taskName}`);
-  console.log(`Detalle:    Restan ${kmRemaining} KMs (Lector total: ${currentKm} KMs)`);
-  console.log("=".repeat(60) + "\n");
-
-  return res.json({
-    success: true,
-    method: "simulation",
-    message: `Alerta Simulada: Correo enviado a ${userEmail} (Vehículo: ${vehicleName}, Tarea: ${taskName}, KMs: ${kmRemaining}). Configura el archivo .env.example para correo SMTP real.`
-  });
-});
 
 // API endpoint to send maintenance push notifications
 app.post("/api/send-push-notification", async (req, res) => {
