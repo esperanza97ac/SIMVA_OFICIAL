@@ -333,33 +333,12 @@ export default function TaskTracker({
       {/* Control Actions Panel - Simplified button-bar with no bulky box */}
       <div className="flex flex-wrap items-center justify-end gap-2.5 mt-2 mb-4">
         <button
-          id="print-plan-btn"
-          type="button"
-          onClick={handlePrint}
-          className="flex items-center gap-1.5 rounded-lg border border-primary-800 bg-primary-950/40 px-3 py-1.5 font-sans text-xs font-semibold text-primary-300 hover:bg-primary-900 hover:text-white transition-all cursor-pointer"
-        >
-          <Printer className="h-3.5 w-3.5" />
-          <span>Imprimir Ficha</span>
-        </button>
-
-        <button
-          id="clear-all-data-btn"
-          type="button"
-          onClick={onResetAll}
-          className="flex items-center gap-1.5 rounded-lg border border-red-900/30 bg-red-950/10 px-3 py-1.5 font-sans text-xs font-semibold text-red-400 hover:bg-red-950/40 transition-all cursor-pointer"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          <span>Limpiar Datos</span>
-        </button>
-
-        <button
           id="toggle-add-form-btn"
           type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-1.5 rounded-lg bg-accent-gold hover:bg-cyan-400 px-3 py-1.5 font-sans text-xs font-black text-primary-950 shadow-[0_0_15px_rgba(0,210,255,0.2)] transition-all active:scale-98 cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-accent-gold hover:bg-cyan-400 px-4 py-2 font-sans text-xs font-black text-primary-950 shadow-[0_0_15px_rgba(0,210,255,0.2)] transition-all active:scale-98 cursor-pointer"
         >
-          <Plus className="h-3.5 w-3.5 stroke-[3]" />
-          <span>+ Personalizar Plan</span>
+          <span>Personalizar Plan</span>
         </button>
       </div>
 

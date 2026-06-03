@@ -10,6 +10,7 @@ import CarProfileForm from "./components/CarProfileForm";
 import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
+import OnboardingGuide from "./components/OnboardingGuide";
 import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin, Pencil } from "lucide-react";
 import Talleres from "./components/Talleres";
 import MisDocumentos from "./components/MisDocumentos";
@@ -295,6 +296,7 @@ export default function App() {
   const [selectedDetailVehicleId, setSelectedDetailVehicleId] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   // Embedded Settings Preferences (from deleted Ajustes screen)
   const [warnDistance, setWarnDistance] = useState<number>(() => {
@@ -1330,7 +1332,13 @@ export default function App() {
   return (
     <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-24 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
-      <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+      <Header 
+        hasCar={!!carProfile} 
+        carName={carProfile?.makeModel} 
+        notifications={getNotifications()} 
+        onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+        onShowGuide={() => setIsOnboardingOpen(true)}
+      />
 
       {/* Confirmation Modal Container for Vehicle Deletion */}
       {vehicleToDelete && (
@@ -2453,6 +2461,18 @@ export default function App() {
             </div>
           </main>
         </div>
+      )}
+
+      {currentUser && (
+        <OnboardingGuide
+          vehiclesCount={vehicles.length}
+          activeScreen={activeScreen}
+          setActiveScreen={setActiveScreen}
+          selectedVehicleId={selectedDetailVehicleId}
+          setSelectedVehicleId={setSelectedDetailVehicleId}
+          isOpen={isOnboardingOpen}
+          setIsOpen={setIsOnboardingOpen}
+        />
       )}
 
     </div>

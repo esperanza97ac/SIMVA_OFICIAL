@@ -1,4 +1,4 @@
-import { Bell, Clock, AlertTriangle, AlertCircle, CheckCircle, ShieldAlert, Menu } from "lucide-react";
+import { Bell, Clock, AlertTriangle, AlertCircle, CheckCircle, ShieldAlert, Menu, HelpCircle } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { SimvaLogo } from "./SimvaLogo";
 
@@ -16,9 +16,10 @@ interface HeaderProps {
   carName?: string;
   notifications?: NotificationItem[];
   onMenuToggle?: () => void;
+  onShowGuide?: () => void;
 }
 
-export default function Header({ hasCar, carName, notifications = [], onMenuToggle }: HeaderProps) {
+export default function Header({ hasCar, carName, notifications = [], onMenuToggle, onShowGuide }: HeaderProps) {
   const [time, setTime] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -81,7 +82,17 @@ export default function Header({ hasCar, carName, notifications = [], onMenuTogg
           <span>{time}</span>
         </div>
 
-
+        {/* Onboarding Guide Trigger button */}
+        {hasCar && onShowGuide && (
+          <button
+            type="button"
+            onClick={onShowGuide}
+            className="p-1.5 rounded-lg border border-transparent hover:border-[#2ac1ff]/20 bg-transparent hover:bg-[#2ac1ff]/5 text-on-surface-variant hover:text-[#2ac1ff] transition-all cursor-pointer flex items-center justify-center shrink-0"
+            title="Guía de Inicio SIMVA"
+          >
+            <HelpCircle className="h-4.5 w-4.5" />
+          </button>
+        )}
 
         {/* Notifications Bell and Dropdown Container */}
         <div className="relative">
