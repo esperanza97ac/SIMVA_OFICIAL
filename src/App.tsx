@@ -970,7 +970,7 @@ export default function App() {
       { tarea: "Cambio de líquido de frenos", cada_km: 60000, cada_meses: 24 },
       { tarea: "Revisión de pastillas y discos de freno", cada_km: 30000, cada_meses: 12 },
       { tarea: "Cambio de filtro del habitáculo (antipolen)", cada_km: 15000, cada_meses: 12 },
-      { tarea: "Revisión de nivel de anticongelante", cada_km: 20000, cada_meses: 12 }
+      { tarea: "Sustitución de líquido refrigerante", cada_km: 40000, cada_meses: 24 }
     ];
     const typeLower = (fuelType || "Gasolina").toLowerCase();
     if (typeLower.includes("electric") || typeLower.includes("eléctric")) {
@@ -2430,17 +2430,8 @@ export default function App() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <h4 className="text-red-400 font-sans font-bold text-xs uppercase tracking-wider">Zona de Peligro</h4>
-                        <p className="text-[10px] text-on-surface-variant font-sans">
-                          Gestión avanzada de registros e identidad.
-                        </p>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={handleResetAll}
-                          className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-200 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
-                        >
-                          Limpiar Datos
-                        </button>
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
                           className="py-1.5 px-3 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"

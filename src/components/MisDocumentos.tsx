@@ -37,14 +37,23 @@ export default function MisDocumentos() {
     }
 
     const defaults: DocumentItem[] = [
-      { id: "permiso", name: "Permiso de Circulación", expiryDate: "2028-05-20", reminderEnabled: true, reminderDays: 30 },
-      { id: "itv", name: "Tarjeta ITV / Ficha Técnica", expiryDate: "2027-02-15", reminderEnabled: true, reminderDays: 15 },
-      { id: "seguro", name: "Póliza de Seguro", expiryDate: "2026-12-01", reminderEnabled: true, reminderDays: 30 },
-      { id: "conducir", name: "Carné de Conducir", expiryDate: "2031-08-10", reminderEnabled: true, reminderDays: 30 },
+      { id: "permiso", name: "Permiso de Circulación", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+      { id: "itv", name: "Tarjeta ITV / Ficha Técnica", expiryDate: "", reminderEnabled: true, reminderDays: 15 },
+      { id: "seguro", name: "Póliza de Seguro", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+      { id: "conducir", name: "Carné de Conducir", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+      { id: "multas", name: "Notificaciones de Multas y Sanciones", expiryDate: "", reminderEnabled: true, reminderDays: 10 },
     ];
 
     if (docsList.length > 0) {
-      const merged = [...docsList];
+      const oldMocks = ["2028-05-20", "2027-02-15", "2026-12-01", "2031-08-10", "2026-08-15"];
+      const cleanedList = docsList.map(d => {
+        if (!d.photoUrl && oldMocks.includes(d.expiryDate)) {
+          return { ...d, expiryDate: "" };
+        }
+        return d;
+      });
+
+      const merged = [...cleanedList];
       defaults.forEach(def => {
         if (!merged.some(d => d.id === def.id)) {
           merged.push(def);
@@ -82,12 +91,20 @@ export default function MisDocumentos() {
             if (data && Array.isArray(data.docs)) {
               const list = data.docs;
               const defaults: DocumentItem[] = [
-                { id: "permiso", name: "Permiso de Circulación", expiryDate: "2028-05-20", reminderEnabled: true, reminderDays: 30 },
-                { id: "itv", name: "Tarjeta ITV / Ficha Técnica", expiryDate: "2027-02-15", reminderEnabled: true, reminderDays: 15 },
-                { id: "seguro", name: "Póliza de Seguro", expiryDate: "2026-12-01", reminderEnabled: true, reminderDays: 30 },
-                { id: "conducir", name: "Carné de Conducir", expiryDate: "2031-08-10", reminderEnabled: true, reminderDays: 30 },
+                { id: "permiso", name: "Permiso de Circulación", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+                { id: "itv", name: "Tarjeta ITV / Ficha Técnica", expiryDate: "", reminderEnabled: true, reminderDays: 15 },
+                { id: "seguro", name: "Póliza de Seguro", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+                { id: "conducir", name: "Carné de Conducir", expiryDate: "", reminderEnabled: true, reminderDays: 30 },
+                { id: "multas", name: "Notificaciones de Multas y Sanciones", expiryDate: "", reminderEnabled: true, reminderDays: 10 },
               ];
-              const merged = [...list];
+              const oldMocks = ["2028-05-20", "2027-02-15", "2026-12-01", "2031-08-10", "2026-08-15"];
+              const cleanedList = list.map((d: any) => {
+                if (!d.photoUrl && oldMocks.includes(d.expiryDate)) {
+                  return { ...d, expiryDate: "" };
+                }
+                return d;
+              });
+              const merged = [...cleanedList];
               defaults.forEach(def => {
                 if (!merged.some(d => d.id === def.id)) {
                   merged.push(def);
@@ -173,6 +190,11 @@ export default function MisDocumentos() {
       return;
     }
 
+    if (!expiryDate) {
+      notify("⚠️ Por favor establece una fecha de vencimiento o sube tu documento primero para poder probar el aviso.");
+      return;
+    }
+
     try {
       const displayExpiry = docName.toLowerCase().includes("permiso") 
         ? formatExpiryWithoutDay(expiryDate) 
@@ -203,6 +225,13 @@ export default function MisDocumentos() {
   };
 
   const getStatus = (dateStr: string) => {
+    if (!dateStr) {
+      return { 
+        label: "Pendiente", 
+        color: "text-[#2ac1ff] border-[#2ac1ff]/20 bg-[#2ac1ff]/5", 
+        icon: <Clock className="h-3.5 w-3.5 text-[#2ac1ff]" /> 
+      };
+    }
     const today = new Date();
     const expDate = new Date(dateStr);
     const diffTime = expDate.getTime() - today.getTime();
@@ -515,13 +544,23 @@ export default function MisDocumentos() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span 
-                                onClick={() => handleStartEdit(doc)}
-                                className="text-xs text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
-                                title="Haga clic para editar vencimiento"
-                              >
-                                Expira: {displayExpiry}
-                              </span>
+                              {displayExpiry ? (
+                                <span 
+                                  onClick={() => handleStartEdit(doc)}
+                                  className="text-xs text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
+                                  title="Haga clic para editar vencimiento"
+                                >
+                                  Expira: {displayExpiry}
+                                </span>
+                              ) : (
+                                <span 
+                                  onClick={() => handleStartEdit(doc)}
+                                  className="text-xs text-white hover:text-[#2ac1ff] cursor-pointer underline transition-colors"
+                                  title="Haga clic para configurar vencimiento manual"
+                                >
+                                  Expira: (Sube documento o ingresa la fecha)
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -565,14 +604,14 @@ export default function MisDocumentos() {
                 </div>
               </div>
 
-              {/* Collapsible Recordatorios Push Alert Config Section */}
+              {/* Collapsible Recordatorio Config Section */}
               {doc.id !== "permiso" && (
                 <div className="w-full mt-2 border-t border-white/5 pt-3">
                   <div className="flex flex-col gap-3 bg-black/40 p-4 rounded-xl border border-white/5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono font-bold text-gray-300 uppercase flex items-center gap-1.5">
                         <Bell className="h-4 w-4 text-[#2ac1ff]" />
-                        <span>Recordatorios de Vencer</span>
+                        <span>Recordatorio</span>
                       </span>
                       <button
                         type="button"
@@ -583,7 +622,7 @@ export default function MisDocumentos() {
                             : "bg-white/5 text-gray-500 border border-white/5"
                         }`}
                       >
-                        {doc.reminderEnabled ? "Activo 🔔" : "Desactivado 🔕"}
+                        {doc.reminderEnabled ? "Activo" : "Desactivado"}
                       </button>
                     </div>
 
@@ -602,15 +641,6 @@ export default function MisDocumentos() {
                             <option value={30}>30 días antes</option>
                           </select>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => sendTestPushReminder(doc.name, doc.expiryDate)}
-                          className="py-1 px-2.5 uppercase tracking-wide bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 text-[#2ac1ff] border border-[#2ac1ff]/20 rounded font-mono text-[9px] font-black transition-all cursor-pointer flex items-center gap-1"
-                          title="Probar de inmediato el envío de notificación push"
-                        >
-                          <span>Probar Recordatorio Push 📱</span>
-                        </button>
                       </div>
                     )}
                   </div>

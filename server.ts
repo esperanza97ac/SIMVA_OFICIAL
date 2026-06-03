@@ -234,6 +234,8 @@ app.post("/api/maintenance-plan", async (req, res) => {
 - Tipo de Motor/Combustible: ${fuelType}
 ${vin ? `- Número identificador (VIN / Bastidor): ${vin}` : ""}
 
+Es un requisito obligatorio que incluyas también el apartado de "líquido refrigerante" (líquido de refrigeración/anticongelante) en el plan de mantenimiento preventivo de este vehículo con su periodicidad adecuada recomendada (por ejemplo, cada 40.000 km o 24 meses, según corresponda).
+
 ${vin ? `ATENCIÓN ESPECIAL DE EXHAUSTIVIDAD (CÓDIGO VIN PROPORCIONADO):
 Se ha facilitado el número de bastidor (VIN): ${vin}. Como disponemos de este identificador, debes decodificar y analizar detalladamente el tipo de motorización (cilindrada, arquitectura, correa vs cadena, variantes de admisión, especificaciones de bujías correspondientes, fluidos de transmisión específicos, etc.). 
 Por lo tanto, la lista de tareas de mantenimiento DEBE SER ALTAMENTE EXHAUSTIVA Y DETALLADA. 
@@ -361,7 +363,7 @@ function getIndustryFallbackPlan(fuelType: string, vehicleType?: string) {
     { tarea: "Cambio de líquido de frenos", cada_km: 60000, cada_meses: 24 },
     { tarea: "Revisión de pastillas y discos de freno", cada_km: 30000, cada_meses: 12 },
     { tarea: "Cambio de filtro del habitáculo (antipolen)", cada_km: 15000, cada_meses: 12 },
-    { tarea: "Revisión general de seguridad y niveles", cada_km: 15000, cada_meses: 12 }
+    { tarea: "Sustitución de líquido refrigerante", cada_km: 40000, cada_meses: 24 }
   ];
 
   const typeLower = (fuelType || "").toLowerCase();
