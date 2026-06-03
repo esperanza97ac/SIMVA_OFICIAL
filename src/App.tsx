@@ -1328,7 +1328,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-16 md:pt-24 md:pb-8">
+    <div className="flex min-h-screen flex-col bg-background font-sans antialiased text-white pt-20 pb-24 md:pt-24 md:pb-8">
       {/* Premium Dashboard Header */}
       <Header hasCar={!!carProfile} carName={carProfile?.makeModel} notifications={getNotifications()} onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
 
@@ -1482,7 +1482,7 @@ export default function App() {
           <AuthScreen onAuthSuccess={() => {}} />
         </main>
       ) : (
-        <div className="flex-1 flex flex-col md:flex-row w-full max-w-7xl mx-auto relative px-4 md:px-8 gap-6 pt-4">
+        <div className="flex-1 flex flex-col md:flex-row w-full max-w-7xl mx-auto relative px-3 md:px-8 gap-6 pt-4">
           {/* MOBILE SIDEBAR BACKGROUND SHADOW BACKDROP */}
           {isMobileMenuOpen && (
             <div 
@@ -1887,204 +1887,218 @@ export default function App() {
                       </div>
                     ) : (
                       <>
-                        {/* Fleet health status card requested by the user */}
-                        <div className="glass-card p-5 rounded-2xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left">
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
-                            <div>
-                              <h3 className="font-sans font-black text-[#2ac1ff] uppercase tracking-tight text-sm flex items-center gap-2">
-                                <Sliders className="h-4.5 w-4.5 text-[#2ac1ff]" />
-                                <span>Resumen de Alertas y Diagnóstico de Flota</span>
-                              </h3>
-                              <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">
-                                Estado predictivo de todos los vehículos registrados
+                        {!selectedDetailVehicleId ? (
+                          <>
+                            {/* Fleet health status card requested by the user */}
+                            <div className="glass-card p-3 sm:p-5 rounded-xl sm:rounded-2xl border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)] backdrop-blur-md text-left">
+                              <div className="flex items-center justify-between border-b border-white/5 pb-2.5 sm:pb-3 mb-3 sm:mb-4">
+                                <div>
+                                  <h3 className="font-sans font-black text-[#2ac1ff] uppercase tracking-tight text-[11px] sm:text-sm flex items-center gap-1.5 sm:gap-2">
+                                    <Sliders className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-[#2ac1ff] shrink-0" />
+                                    <span>Resumen de Alertas y Diagnóstico de Flota</span>
+                                  </h3>
+                                  <p className="text-[8px] sm:text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">
+                                    Estado predictivo de todos los vehículos registrados
+                                  </p>
+                                </div>
+                                <div className="font-mono text-[8px] sm:text-[9px] text-[#2ac1ff]/90 bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider font-bold shrink-0">
+                                  {vehicles.length} {vehicles.length === 1 ? "Veh." : "Vehs."}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 sm:gap-4 max-w-3xl mx-auto w-full">
+                                {/* 🔴 Sección de Peligro Crítico */}
+                                <div className="bg-red-500/5 hover:bg-red-500/[0.08] duration-200 border border-red-500/20 rounded-xl p-2 sm:p-4 flex flex-col gap-2 sm:gap-3 transition-colors">
+                                  <div className="flex items-center justify-between border-b border-red-500/10 pb-1.5 mb-0.5">
+                                    <div className="flex items-center gap-1 text-red-500 font-bold text-[9px] sm:text-[11px] uppercase tracking-wider font-mono min-w-0">
+                                      <motion.div
+                                        animate={{
+                                          scale: [1, 1.25, 1],
+                                          rotate: [0, -5, 5, 0]
+                                        }}
+                                        transition={{
+                                          duration: 1.5,
+                                          repeat: Infinity,
+                                          ease: "easeInOut"
+                                        }}
+                                        className="text-red-500 shrink-0"
+                                      >
+                                        <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                      </motion.div>
+                                      <span className="truncate">Peligro Crítico</span>
+                                    </div>
+                                    <span className="bg-red-500/20 border border-red-500/30 text-red-500 font-mono text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-md font-bold shrink-0">
+                                      {criticalVehicles.length}
+                                    </span>
+                                  </div>
+
+                                  {criticalVehicles.length === 0 ? (
+                                    <div className="py-2.5 text-center my-auto">
+                                      <p className="text-[9px] sm:text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
+                                        🟢 Sin Alertas
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col gap-1.5 max-h-[170px] overflow-y-auto pr-0.5">
+                                      {criticalVehicles.map(({ veh }) => {
+                                        const isSelected = selectedDetailVehicleId === veh.id;
+                                        return (
+                                          <div
+                                            key={veh.id}
+                                            onClick={() => {
+                                              selectVehicle(veh);
+                                              setSelectedDetailVehicleId(veh.id || null);
+                                              setNewOdo(veh.currentKm.toString());
+                                            }}
+                                            className={`flex flex-col p-1.5 sm:p-2.5 gap-1.5 rounded-lg border transition-all cursor-pointer ${
+                                              isSelected
+                                                ? "bg-red-500/20 border-red-400 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                                                : "bg-black/40 border-red-500/20 text-white/90 hover:bg-red-500/10 hover:border-red-500/40"
+                                            }`}
+                                          >
+                                            <div className="flex items-start gap-1">
+                                              <span className="text-red-400 shrink-0 text-[10px] sm:text-xs">⚠️</span>
+                                              <div className="text-left min-w-0 flex-1">
+                                                <p className="font-sans font-black text-[10px] sm:text-[12px] uppercase leading-tight truncate">
+                                                  {veh.makeModel}
+                                                </p>
+                                                <p className="text-[8px] text-[#2ac1ff] font-mono leading-none mt-0.5 truncate">
+                                                  {veh.vin ? `VIN: ${veh.vin.slice(-6)}` : "Sin VIN"}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="flex flex-col gap-1 mt-0.5">
+                                              <span className="text-[8px] sm:text-[9px] font-mono font-bold bg-black/60 px-1 py-0.5 rounded text-red-400 border border-red-400/20 text-center block w-full truncate">
+                                                {veh.currentKm.toLocaleString("es-ES")} KMs
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setActiveScreen("talleres");
+                                                }}
+                                                className="w-full py-0.5 bg-[#2ac1ff]/20 hover:bg-[#2ac1ff]/35 text-[#2ac1ff] hover:text-white border border-[#2ac1ff]/35 hover:border-[#2ac1ff]/60 text-[8px] font-mono font-bold rounded transition-all cursor-pointer uppercase tracking-wider text-center"
+                                                title="Buscar taller mecánico para este vehículo"
+                                              >
+                                                Taller
+                                              </button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* 🟡 Sección de Advertencia */}
+                                <div className="bg-amber-500/5 hover:bg-amber-500/[0.08] duration-200 border border-amber-500/20 rounded-xl p-2 sm:p-4 flex flex-col gap-2 sm:gap-3 transition-colors">
+                                  <div className="flex items-center justify-between border-b border-amber-500/10 pb-1.5 mb-0.5">
+                                    <div className="flex items-center gap-1 text-amber-500 font-bold text-[9px] sm:text-[11px] uppercase tracking-wider font-mono min-w-0">
+                                      <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />
+                                      <span className="truncate">Advertencia</span>
+                                    </div>
+                                    <span className="bg-amber-500/20 border border-amber-500/30 text-amber-500 font-mono text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-md font-bold shrink-0">
+                                      {warningVehicles.length}
+                                    </span>
+                                  </div>
+
+                                  {warningVehicles.length === 0 ? (
+                                    <div className="py-2.5 text-center my-auto">
+                                      <p className="text-[9px] sm:text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
+                                        ⭐ Sin Avisos
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col gap-1.5 max-h-[170px] overflow-y-auto pr-0.5">
+                                      {warningVehicles.map(({ veh }) => {
+                                        const isSelected = selectedDetailVehicleId === veh.id;
+                                        return (
+                                          <div
+                                            key={veh.id}
+                                            onClick={() => {
+                                              selectVehicle(veh);
+                                              setSelectedDetailVehicleId(veh.id || null);
+                                              setNewOdo(veh.currentKm.toString());
+                                            }}
+                                            className={`flex flex-col p-1.5 sm:p-2.5 gap-1.5 rounded-lg border transition-all cursor-pointer ${
+                                              isSelected
+                                                ? "bg-amber-500/20 border-amber-400 text-white shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                                : "bg-black/40 border-amber-500/20 text-white/90 hover:bg-amber-500/10 hover:border-amber-500/40"
+                                            }`}
+                                          >
+                                            <div className="flex items-start gap-1">
+                                              <span className="text-amber-400 shrink-0 text-[10px] sm:text-xs">🔧</span>
+                                              <div className="text-left min-w-0 flex-1">
+                                                <p className="font-sans font-black text-[10px] sm:text-[12px] uppercase leading-tight truncate">
+                                                  {veh.makeModel}
+                                                </p>
+                                                <p className="text-[8px] text-[#2ac1ff] font-mono leading-none mt-0.5 truncate">
+                                                  {veh.vin ? `VIN: ${veh.vin.slice(-6)}` : "Sin VIN"}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            <div className="flex flex-col gap-1 mt-0.5">
+                                              <span className="text-[8px] sm:text-[9px] font-mono font-bold bg-black/60 px-1 py-0.5 rounded text-amber-400 border border-amber-400/20 text-center block w-full truncate">
+                                                {veh.currentKm.toLocaleString("es-ES")} KMs
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setActiveScreen("talleres");
+                                                }}
+                                                className="w-full py-0.5 bg-[#2ac1ff]/20 hover:bg-[#2ac1ff]/35 text-[#2ac1ff] hover:text-white border border-[#2ac1ff]/35 hover:border-[#2ac1ff]/60 text-[8px] font-mono font-bold rounded transition-all cursor-pointer uppercase tracking-wider text-center"
+                                                title="Buscar taller mecánico para este vehículo"
+                                              >
+                                                Taller
+                                              </button>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* 🟢 Sección de Vehículos Correctos */}
+                              {okayVehicles.length > 0 && (
+                                <div className="border-t border-white/5 pt-3 mt-2.5 flex flex-wrap items-center gap-1.5">
+                                  <span className="text-[8px] sm:text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
+                                    Vehículos Al Día:
+                                  </span>
+                                  {okayVehicles.map(({ veh }) => {
+                                    const isSelected = selectedDetailVehicleId === veh.id;
+                                    return (
+                                      <button
+                                        key={veh.id}
+                                        type="button"
+                                        onClick={() => {
+                                          selectVehicle(veh);
+                                          setSelectedDetailVehicleId(veh.id || null);
+                                          setNewOdo(veh.currentKm.toString());
+                                        }}
+                                        className={`py-0.5 px-2 rounded-md text-[8px] sm:text-[9px] font-mono font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                                          isSelected
+                                            ? "bg-emerald-500/20 border-emerald-400 text-white"
+                                            : "bg-emerald-950/20 border-emerald-500/10 text-emerald-300 hover:border-emerald-500/30"
+                                        }`}
+                                      >
+                                        <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span>{veh.makeModel}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="glass-card p-6 rounded-2xl border border-white/10 text-center">
+                              <p className="text-xs text-on-surface-variant font-mono">
+                                👇 Selecciona un vehículo de arriba (o en la pestaña Garaje) para ver su plan de trabajo detallado.
                               </p>
                             </div>
-                            <div className="font-mono text-[9px] text-[#2ac1ff]/90 bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
-                              {vehicles.length} {vehicles.length === 1 ? "Vehículo" : "Vehículos"}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* 🔴 Sección de Peligro Crítico */}
-                            <div className="bg-red-500/5 hover:bg-red-500/[0.08] duration-200 border border-red-500/20 rounded-xl p-4 flex flex-col gap-3 transition-colors">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-red-500 font-bold text-[11px] uppercase tracking-wider font-mono">
-                                  <motion.div
-                                    animate={{
-                                      scale: [1, 1.25, 1],
-                                      rotate: [0, -5, 5, 0]
-                                    }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: "easeInOut"
-                                    }}
-                                    className="text-red-500 shrink-0"
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                  </motion.div>
-                                  <span>Peligro Crítico</span>
-                                </div>
-                                <span className="bg-red-500/20 border border-red-500/30 text-red-400 font-mono text-[10px] px-1.5 py-0.5 rounded-md font-bold">
-                                  {criticalVehicles.length}
-                                </span>
-                              </div>
-
-                              {criticalVehicles.length === 0 ? (
-                                <div className="py-2.5 text-center">
-                                  <p className="text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
-                                    🟢 Sin Alertas Críticas
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
-                                  {criticalVehicles.map(({ veh }) => {
-                                    const isSelected = selectedDetailVehicleId === veh.id;
-                                    return (
-                                      <div
-                                        key={veh.id}
-                                        onClick={() => {
-                                          selectVehicle(veh);
-                                          setSelectedDetailVehicleId(veh.id || null);
-                                          setNewOdo(veh.currentKm.toString());
-                                        }}
-                                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
-                                          isSelected
-                                            ? "bg-red-500/20 border-red-400 text-white shadow-[0_0_10px_rgba(239,68,68,0.2)]"
-                                            : "bg-black/40 border-red-500/20 text-white/90 hover:bg-red-500/10 hover:border-red-500/40"
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-red-400 shrink-0">⚠️</span>
-                                          <div className="text-left">
-                                            <p className="font-sans font-extrabold text-[12px] uppercase leading-tight">
-                                              {veh.makeModel}
-                                            </p>
-                                            <p className="text-[9px] text-[#2ac1ff] font-mono leading-none mt-0.5">
-                                              {veh.vin ? `VIN: ${veh.vin}` : "Sin VIN"}
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          <span className="text-[9px] font-mono font-bold bg-black/60 px-1.5 py-0.5 rounded text-red-400 border border-red-400/20">
-                                            {veh.currentKm.toLocaleString("es-ES")} KMs
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setActiveScreen("talleres");
-                                            }}
-                                            className="py-1 px-2.5 bg-[#2ac1ff]/20 hover:bg-[#2ac1ff]/35 text-[#2ac1ff] hover:text-white border border-[#2ac1ff]/35 hover:border-[#2ac1ff]/60 text-[9px] font-mono font-bold rounded transition-all cursor-pointer uppercase tracking-wider"
-                                            title="Buscar taller mecánico para este vehículo"
-                                          >
-                                            Buscar Taller
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 🟡 Sección de Advertencia */}
-                            <div className="bg-amber-500/5 hover:bg-amber-500/[0.08] duration-200 border border-amber-500/20 rounded-xl p-4 flex flex-col gap-3 transition-colors">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-amber-500 font-bold text-[11px] uppercase tracking-wider font-mono">
-                                  <span className="h-2 w-2 rounded-full bg-amber-400" />
-                                  <span>Advertencia</span>
-                                </div>
-                                <span className="bg-amber-500/20 border border-amber-500/30 text-amber-400 font-mono text-[10px] px-1.5 py-0.5 rounded-md font-bold">
-                                  {warningVehicles.length}
-                                </span>
-                              </div>
-
-                              {warningVehicles.length === 0 ? (
-                                <div className="py-2.5 text-center">
-                                  <p className="text-[11px] text-on-surface-variant font-mono uppercase tracking-wider">
-                                    ⭐ Sin Advertencias
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
-                                  {warningVehicles.map(({ veh }) => {
-                                    const isSelected = selectedDetailVehicleId === veh.id;
-                                    return (
-                                      <div
-                                        key={veh.id}
-                                        onClick={() => {
-                                          selectVehicle(veh);
-                                          setSelectedDetailVehicleId(veh.id || null);
-                                          setNewOdo(veh.currentKm.toString());
-                                        }}
-                                        className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
-                                          isSelected
-                                            ? "bg-amber-500/20 border-amber-400 text-white shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                                            : "bg-black/40 border-amber-500/20 text-white/90 hover:bg-amber-500/10 hover:border-amber-500/40"
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-amber-400 shrink-0">🔧</span>
-                                          <div className="text-left">
-                                            <p className="font-sans font-extrabold text-[12px] uppercase leading-tight">
-                                              {veh.makeModel}
-                                            </p>
-                                            <p className="text-[9px] text-[#2ac1ff] font-mono leading-none mt-0.5">
-                                              {veh.vin ? `VIN: ${veh.vin}` : "Sin VIN"}
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <span className="text-[9px] font-mono font-bold bg-black/60 px-1.5 py-0.5 rounded text-amber-400 border border-amber-400/20">
-                                          {veh.currentKm.toLocaleString("es-ES")} KMs
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* 🟢 Sección de Vehículos Correctos */}
-                          {okayVehicles.length > 0 && (
-                            <div className="border-t border-white/5 pt-3.5 mt-3 flex flex-wrap items-center gap-2">
-                              <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                                Vehículos Al Día:
-                              </span>
-                              {okayVehicles.map(({ veh }) => {
-                                const isSelected = selectedDetailVehicleId === veh.id;
-                                return (
-                                  <button
-                                    key={veh.id}
-                                    type="button"
-                                    onClick={() => {
-                                      selectVehicle(veh);
-                                      setSelectedDetailVehicleId(veh.id || null);
-                                      setNewOdo(veh.currentKm.toString());
-                                    }}
-                                    className={`py-1 px-2.5 rounded-lg text-[10px] font-mono font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                                      isSelected
-                                        ? "bg-emerald-500/20 border-emerald-400 text-white"
-                                        : "bg-emerald-950/20 border-emerald-500/10 text-emerald-300 hover:border-emerald-500/30"
-                                    }`}
-                                  >
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                    <span>{veh.makeModel}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Detail of selected vehicle */}
-                        {!selectedDetailVehicleId ? (
-                          <div className="glass-card p-6 rounded-2xl border border-white/10 text-center">
-                            <p className="text-xs text-on-surface-variant font-mono">
-                              👇 Selecciona un vehículo de las listas de arriba para ver su plan de trabajo detallado.
-                            </p>
-                          </div>
+                          </>
                         ) : (() => {
                           const currentVeh = vehicles.find(v => v.id === selectedDetailVehicleId);
                           if (!currentVeh) {
@@ -2118,7 +2132,15 @@ export default function App() {
                           return (
                             <div className="animate-fade-in flex flex-col gap-6">
                               <div className="flex items-center justify-between">
-                                <h3 className="font-sans font-black text-base text-[#2ac1ff] uppercase tracking-tight">Plan de Mantenimiento Detallado</h3>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedDetailVehicleId(null)}
+                                  className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5 self-start"
+                                >
+                                  <ArrowLeft className="h-3.5 w-3.5 text-[#2ac1ff]" />
+                                  <span>Volver a Alertas / Flota</span>
+                                </button>
+                                
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2432,6 +2454,7 @@ export default function App() {
           </main>
         </div>
       )}
+
     </div>
   );
 }
