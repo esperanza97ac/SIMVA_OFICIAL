@@ -439,7 +439,7 @@ export default function MisDocumentos() {
                   />
                   <div className="absolute inset-4 border-2 border-dashed border-[#2ac1ff]/40 rounded-lg pointer-events-none flex items-center justify-center">
                     <div className="w-full h-0.5 bg-[#2ac1ff] opacity-60 absolute animate-scan line-sweep" />
-                    <span className="text-[10px] font-mono bg-black/60 text-[#2ac1ff] px-2 py-0.5 rounded border border-[#2ac1ff]/20">
+                    <span className="text-xs font-mono bg-black/60 text-[#2ac1ff] px-2 py-0.5 rounded border border-[#2ac1ff]/20">
                       ML KIT TEXT TARGET
                     </span>
                   </div>
@@ -453,7 +453,7 @@ export default function MisDocumentos() {
               <canvas ref={canvasRef} className="hidden" />
             </div>
 
-            <div className="bg-black/60 rounded-xl p-3 border border-white/5 h-44 md:h-auto overflow-y-auto space-y-1 font-mono text-[10px] text-gray-400 text-left">
+            <div className="bg-black/60 rounded-xl p-3 border border-white/5 h-44 md:h-auto overflow-y-auto space-y-1 font-mono text-xs text-gray-400 text-left">
               <span className="text-[#2ac1ff] font-bold block mb-1 border-b border-white/5 pb-1">CONSOLA COM.GOOGLE.MLKIT:TEXT-RECOGNITION</span>
               {ocrLog.map((log, idx) => (
                 <p key={idx} className="leading-relaxed">
@@ -524,7 +524,7 @@ export default function MisDocumentos() {
                     {/* Expiration date layout with edit state */}
                     {doc.id !== "permiso" ? (
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant font-mono">
+                        <div className="flex items-center gap-1.5 text-sm text-on-surface-variant font-mono">
                           <Calendar className="h-3.5 w-3.5 text-[#2ac1ff]" />
                           {isEditing ? (
                             <div className="flex items-center gap-1">
@@ -532,12 +532,12 @@ export default function MisDocumentos() {
                                 type="date"
                                 value={tempDate}
                                 onChange={(e) => setTempDate(e.target.value)}
-                                className="bg-black border border-white/20 text-[10.5px] px-1.5 py-0.5 rounded text-white font-mono focus:outline-none focus:border-[#2ac1ff]"
+                                className="bg-black border border-white/20 text-xs px-2 py-0.5 rounded text-white font-mono focus:outline-none focus:border-[#2ac1ff]"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleSaveDate(doc.id)}
-                                className="bg-[#2ac1ff] text-black px-1.5 py-0.5 rounded font-sans text-[9px] font-bold uppercase transition-all cursor-pointer"
+                                className="bg-[#2ac1ff] text-black px-2 py-0.5 rounded font-sans text-xs font-bold uppercase transition-all cursor-pointer"
                               >
                                 Ok
                               </button>
@@ -547,7 +547,7 @@ export default function MisDocumentos() {
                               {displayExpiry ? (
                                 <span 
                                   onClick={() => handleStartEdit(doc)}
-                                  className="text-xs text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
+                                  className="text-sm text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
                                   title="Haga clic para editar vencimiento"
                                 >
                                   Expira: {displayExpiry}
@@ -555,7 +555,7 @@ export default function MisDocumentos() {
                               ) : (
                                 <span 
                                   onClick={() => handleStartEdit(doc)}
-                                  className="text-xs text-white hover:text-[#2ac1ff] cursor-pointer underline transition-colors"
+                                  className="text-sm text-white hover:text-[#2ac1ff] cursor-pointer underline transition-colors"
                                   title="Haga clic para configurar vencimiento manual"
                                 >
                                   Expira: (Sube documento o ingresa la fecha)
@@ -566,7 +566,7 @@ export default function MisDocumentos() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-[10px] text-emerald-400 font-mono bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-0.5 rounded-lg w-fit">
+                      <div className="text-xs text-emerald-400 font-mono bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-0.5 rounded-lg w-fit">
                         No caduca / Permanente
                       </div>
                     )}
@@ -578,13 +578,13 @@ export default function MisDocumentos() {
                   <button
                     type="button"
                     onClick={() => startCamera(doc.id)}
-                    className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer"
+                    className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer"
                   >
                     <Camera className="h-3.5 w-3.5 text-[#2ac1ff]" />
                     <span>CámaraX</span>
                   </button>
 
-                  <label className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer">
+                  <label className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer">
                     <Upload className="h-3.5 w-3.5 text-on-surface-variant" />
                     <span>Subir</span>
                     <input
@@ -609,14 +609,14 @@ export default function MisDocumentos() {
                 <div className="w-full mt-2 border-t border-white/5 pt-3">
                   <div className="flex flex-col gap-3 bg-black/40 p-4 rounded-xl border border-white/5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono font-bold text-gray-300 uppercase flex items-center gap-1.5">
+                      <span className="text-xs font-mono font-bold text-gray-300 uppercase flex items-center gap-1.5">
                         <Bell className="h-4 w-4 text-[#2ac1ff]" />
                         <span>Recordatorio</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => handleToggleReminder(doc.id, !doc.reminderEnabled)}
-                        className={`text-[9px] font-mono px-2.5 py-1 rounded font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`text-xs font-mono px-2.5 py-1 rounded font-bold uppercase tracking-wider transition-all cursor-pointer ${
                           doc.reminderEnabled 
                             ? "bg-[#2ac1ff]/15 text-[#2ac1ff] border border-[#2ac1ff]/35" 
                             : "bg-white/5 text-gray-500 border border-white/5"
@@ -627,13 +627,13 @@ export default function MisDocumentos() {
                     </div>
 
                     {doc.reminderEnabled && (
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-gray-400 font-mono">Días de antelación:</span>
+                          <span className="text-xs text-gray-400 font-mono">Días de antelación:</span>
                           <select
                             value={doc.reminderDays || 30}
                             onChange={(e) => handleUpdateReminderDays(doc.id, Number(e.target.value))}
-                            className="bg-black border border-white/10 text-[10.5px] font-mono rounded px-2 py-1 text-white focus:outline-none focus:border-[#2ac1ff]"
+                            className="bg-black border border-white/10 text-xs font-mono rounded px-2 py-1 text-white focus:outline-none focus:border-[#2ac1ff]"
                           >
                             <option value={0}>El mismo día</option>
                             <option value={7}>7 días antes</option>

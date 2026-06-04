@@ -431,7 +431,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
               }`}
             >
               <Zap className="h-4 w-4" />
-              <span className="text-[10px] tracking-wider uppercase">ELECTRICO</span>
+              <span className="text-xs tracking-wider uppercase">ELECTRICO</span>
             </button>
 
             {/* Tab: Híbrido */}
@@ -445,7 +445,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
               }`}
             >
               <Leaf className="h-4 w-4" />
-              <span className="text-[10px] tracking-wider uppercase">HIBRIDO</span>
+              <span className="text-xs tracking-wider uppercase">HIBRIDO</span>
             </button>
 
           </div>
@@ -466,7 +466,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
             
             {/* Months elapsed manual number input */}
             <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wide">
+              <label className="font-mono text-xs font-bold text-on-surface-variant uppercase tracking-wide">
                 HACE CUÁNTOS MESES
               </label>
               <div className="flex items-center gap-2">
@@ -487,7 +487,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
 
             {/* Mileage level elapsed */}
             <div className="flex flex-col gap-1.5">
-              <label className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wide">
+              <label className="font-mono text-xs font-bold text-on-surface-variant uppercase tracking-wide">
                 KM DEL MANTENIMIENTO
               </label>
               <input
@@ -517,7 +517,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
             <span className="font-mono text-[9px] font-bold text-primary-fixed-dim/95 uppercase tracking-widest block">
               CONFORMIDAD LEGAL Y REGISTRO (RGPD)
             </span>
-            <p className="text-[10px] text-on-surface-variant font-medium mt-1">
+            <p className="text-xs text-on-surface-variant font-medium mt-1">
               De acuerdo con la LOPDGDD y el RGPD europeo.
             </p>
           </div>

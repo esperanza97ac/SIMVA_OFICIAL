@@ -291,7 +291,7 @@ export default function TaskTracker({
         {/* Metric 1: Fleet Odometer with Neon Blue */}
         <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-accent-gold shadow-[0_0_15px_rgba(0,210,255,0.08)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-primary-400">LECTURA ODOMETER</span>
+            <span className="font-mono text-xs uppercase tracking-wider text-primary-400">LECTURA ODOMETER</span>
             <span className="font-mono text-2xl font-black text-white mt-1 uppercase tracking-tight">
               {car.currentKm.toLocaleString("es-ES")} <span className="text-xs text-accent-gold font-bold neon-glow-blue">KM</span>
             </span>
@@ -302,7 +302,7 @@ export default function TaskTracker({
         {/* Metric 2: Warning Alerts (🟡 Cuidado / Atenciones en Rango 500km - 1000km) */}
         <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-amber-500">ADVERTENCIA (500 - 1000 KM)</span>
+            <span className="font-mono text-xs uppercase tracking-wider text-amber-500">ADVERTENCIA (500 - 1000 KM)</span>
             <span className="font-mono text-2xl font-black text-amber-400 mt-1 uppercase tracking-tight">
               {warningCount} <span className="text-xs text-amber-500 font-sans font-medium">Tareas</span>
             </span>
@@ -316,7 +316,7 @@ export default function TaskTracker({
         {/* Metric 3: Critical alerts Overdue (🔴 Peligro inmediato! <500km) */}
         <div className="garage-panel flex items-center justify-between rounded-xl px-5 py-4 border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
           <div className="flex flex-col">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-red-550">PELIGRO CRÍTICO (&lt;500 KM)</span>
+            <span className="font-mono text-xs uppercase tracking-wider text-red-550">PELIGRO CRÍTICO (&lt;500 KM)</span>
             <span className="font-mono text-2xl font-black text-red-400 mt-1 uppercase tracking-tight">
               {criticalCount} <span className="text-xs text-red-500 font-sans font-medium">Urgentes</span>
             </span>
@@ -364,7 +364,7 @@ export default function TaskTracker({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-primary-300 uppercase tracking-widest">
+              <label className="text-xs font-bold text-primary-300 uppercase tracking-widest">
                 Nombre de la pieza o servicio
               </label>
               <input
@@ -379,7 +379,7 @@ export default function TaskTracker({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-primary-300 uppercase tracking-widest">
+              <label className="text-xs font-bold text-primary-300 uppercase tracking-widest">
                 Cada cuántos Kilómetros (0 si no aplica)
               </label>
               <input
@@ -393,7 +393,7 @@ export default function TaskTracker({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-primary-300 uppercase tracking-widest">
+              <label className="text-xs font-bold text-primary-300 uppercase tracking-widest">
                 Cada cuántos meses (0 si no aplica)
               </label>
               <input
@@ -410,7 +410,7 @@ export default function TaskTracker({
           <button
             id="submit-custom-task"
             type="submit"
-            className="mt-1 self-end rounded bg-primary-900 hover:bg-primary-800 text-white font-mono text-[10px] font-bold px-4 py-2 border border-primary-700 hover:border-accent-gold transition-all uppercase tracking-wider cursor-pointer"
+            className="mt-1 self-end rounded bg-primary-900 hover:bg-primary-800 text-white font-mono text-xs font-bold px-4 py-2 border border-primary-700 hover:border-accent-gold transition-all uppercase tracking-wider cursor-pointer"
           >
             Insertar en Ficha
           </button>
@@ -549,7 +549,7 @@ export default function TaskTracker({
                   </div>
                   
                   {/* Status subtitle helper */}
-                  <div className="text-[10px] text-left">
+                  <div className="text-xs text-left">
                     {statusColor === "danger" ? (
                       <span className="text-red-400 font-semibold">• Semáforo Rojo (<strong className="font-black">&lt; 500 km</strong>). Requiere sustitución inmediata.</span>
                     ) : statusColor === "warning" ? (
@@ -677,7 +677,7 @@ export default function TaskTracker({
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary-300">
+                <label className="text-xs font-mono font-bold uppercase tracking-wider text-primary-300">
                   Lectura del odómetro en ese momento:
                 </label>
                 <div className="relative">
@@ -690,14 +690,14 @@ export default function TaskTracker({
                     onChange={(e) => setLogKm(Number(e.target.value))}
                     className="w-full rounded-lg border border-primary-800 bg-primary-950 pl-3 pr-10 py-2.5 text-xs font-mono text-white outline-none focus:border-accent-gold"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-accent-gold font-mono">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-accent-gold font-mono">
                     KM
                   </span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary-300">
+                <label className="text-xs font-mono font-bold uppercase tracking-wider text-primary-300">
                   Fecha de la intervención:
                 </label>
                 <input

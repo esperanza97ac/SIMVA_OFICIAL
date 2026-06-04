@@ -39,13 +39,16 @@ export default function OnboardingGuide({
   const [currentStep, setCurrentStep] = useState(0);
 
   // Auto-trigger if a user registers their first vehicle and has not finished onboarding
+  // Only triggers the very first time (it is saved in localStorage so replenishment/re-logins don't trigger it again automatically)
   useEffect(() => {
     const isCompleted = localStorage.getItem("simva_onboarding_completed");
-    if (vehiclesCount === 1 && !isCompleted) {
+    const isAutoShown = localStorage.getItem("simva_onboarding_auto_shown");
+    if (vehiclesCount === 1 && !isCompleted && !isAutoShown) {
       // Small delay to let the UI settle
       const timer = setTimeout(() => {
         setIsOpen(true);
         setCurrentStep(0);
+        localStorage.setItem("simva_onboarding_auto_shown", "true");
       }, 1200);
       return () => clearTimeout(timer);
     }

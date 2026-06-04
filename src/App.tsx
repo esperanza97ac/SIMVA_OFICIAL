@@ -11,7 +11,7 @@ import TaskTracker from "./components/TaskTracker";
 import EmptyState from "./components/EmptyState";
 import { SimvaLogo } from "./components/SimvaLogo";
 import OnboardingGuide from "./components/OnboardingGuide";
-import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle, Car, LayoutGrid, PlusCircle, User, Gauge, LogOut, Bike, Trash2, Plus, ArrowLeft, Wrench, Settings, FileText, Check, Sliders, Bell, Heart, MapPin, Pencil, MessageSquare } from "lucide-react";
 import Talleres from "./components/Talleres";
 import MisDocumentos from "./components/MisDocumentos";
 
@@ -1350,7 +1350,7 @@ export default function App() {
             </div>
             
             <div className="space-y-1">
-              <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Vehículo seleccionado:</p>
+              <p className="text-xs text-gray-400 font-mono uppercase tracking-wider">Vehículo seleccionado:</p>
               <p className="text-xs text-white font-extrabold uppercase font-sans tracking-tight bg-white/5 px-3 py-2 rounded-xl border border-white/5">
                 {vehicleToDelete.makeModel}
               </p>
@@ -1360,7 +1360,7 @@ export default function App() {
               Esta acción es permanente e irreversible. Se eliminará el vehículo de tu garaje electrónico junto con todo su plan de mantenimiento, registro de tareas completadas e historial de alertas. No podrás recuperar estos datos.
             </p>
 
-            <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 text-[10px] font-semibold text-red-300 leading-normal">
+            <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3 text-xs font-semibold text-red-300 leading-normal">
               ¿Estás seguro de que deseas proceder con el borrado definitivo?
             </div>
 
@@ -1512,7 +1512,7 @@ export default function App() {
                 className="p-1 rounded-md text-on-surface-variant hover:text-white cursor-pointer"
                 title="Cerrar Menú"
               >
-                <span className="text-[10px] font-mono uppercase font-semibold">cerrar ✕</span>
+                <span className="text-xs font-mono uppercase font-semibold">cerrar ✕</span>
               </button>
             </div>
 
@@ -1597,6 +1597,19 @@ export default function App() {
               <User className="h-5 w-5 shrink-0 text-[#2ac1ff]" />
               <span className="font-mono text-xs tracking-wider uppercase">Perfil</span>
             </button>
+
+            {/* Feedback Link */}
+            <div className="border-t border-white/5 my-1.5" />
+            <a
+              href="https://ais-pre-ll2k355q5cyvehxkfnoiyl-165891051069.europe-west2.run.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-3.5 py-3 px-4 rounded-xl cursor-pointer w-full text-left transition-all text-on-surface-variant hover:text-[#2ac1ff] hover:bg-[#2ac1ff]/5 border border-transparent hover:border-[#2ac1ff]/15 font-semibold"
+            >
+              <MessageSquare className="h-5 w-5 shrink-0 text-accent-gold" />
+              <span className="font-mono text-xs tracking-wider uppercase">Dar Feedback</span>
+            </a>
           </nav>
 
           {/* DESKTOP SIDEBAR - STICKY AND PERSISTENT */}
@@ -1681,6 +1694,18 @@ export default function App() {
               <User className="h-4.5 w-4.5 shrink-0 text-[#2ac1ff]" />
               <span className="font-mono text-xs tracking-wider uppercase">Perfil</span>
             </button>
+
+            {/* Feedback Link */}
+            <div className="border-t border-white/5 my-1.5" />
+            <a
+              href="https://ais-pre-ll2k355q5cyvehxkfnoiyl-165891051069.europe-west2.run.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 py-2.5 px-4 rounded-xl cursor-pointer w-full text-left transition-all text-on-surface-variant hover:text-[#2ac1ff] hover:bg-[#2ac1ff]/5 border border-transparent hover:border-[#2ac1ff]/15 font-semibold"
+            >
+              <MessageSquare className="h-4.5 w-4.5 shrink-0 text-accent-gold" />
+              <span className="font-mono text-xs tracking-wider uppercase">Dar Feedback</span>
+            </a>
           </nav>
 
           {/* Main Content Viewport */}
@@ -1726,14 +1751,14 @@ export default function App() {
                       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
                         <div>
                           <h3 className="font-sans font-extrabold text-[#2ac1ff] tracking-tight text-base uppercase">Mis Vehículos Registrados</h3>
-                          <p className="text-[10px] text-on-surface-variant font-mono uppercase mt-0.5">se siempre el rey de la carretera</p>
+                          <p className="text-xs text-on-surface-variant font-mono uppercase mt-0.5">se siempre el rey de la carretera</p>
                         </div>
                         <button
                           onClick={() => {
                             setCarProfile(null);
                             setIsRegistering(true);
                           }}
-                          className="py-1.5 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 hover:border-[#2ac1ff]/40 text-[#2ac1ff] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                          className="py-1.5 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 hover:border-[#2ac1ff]/40 text-[#2ac1ff] text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
                         >
                           <Plus className="h-3 w-3" />
                           <span>Añadir Vehículo</span>
@@ -1799,10 +1824,10 @@ export default function App() {
                                         {veh.makeModel}
                                       </h4>
                                     </div>
-                                    <p className="text-[10px] text-[#2ac1ff] font-mono uppercase tracking-wider">
+                                    <p className="text-xs text-[#2ac1ff] font-mono uppercase tracking-wider">
                                       {veh.vin ? `VIN: ${veh.vin}` : "Sin número de bastidor (VIN)"}
                                     </p>
-                                    <p className="text-[10px] text-primary-fixed-dim font-mono font-bold">
+                                    <p className="text-xs text-primary-fixed-dim font-mono font-bold">
                                       {veh.currentKm.toLocaleString("es-ES")} KMs
                                     </p>
                                   </div>
@@ -1810,7 +1835,7 @@ export default function App() {
 
                                 {/* Odometer Lifeline Score */}
                                 <div className="mt-3 sm:mt-0 flex flex-col justify-end items-start sm:items-end gap-1.5 min-w-[140px]">
-                                  <div className="flex justify-between w-full text-[10px] font-mono">
+                                  <div className="flex justify-between w-full text-xs font-mono">
                                     <span className="text-on-surface-variant">Vida útil:</span>
                                     <span className={`${lifelineText}`}>{lifelineScore}%</span>
                                   </div>
@@ -2180,7 +2205,7 @@ export default function App() {
                                         {currentVeh.vehicleType} · {currentVeh.fuelType} · {currentVeh.year}
                                       </p>
                                       {currentVeh.vin && (
-                                        <p className="text-[10px] text-[#2ac1ff] font-mono font-semibold uppercase">
+                                        <p className="text-xs text-[#2ac1ff] font-mono font-semibold uppercase">
                                           Nº Bastidor (VIN): {currentVeh.vin}
                                         </p>
                                       )}
@@ -2207,7 +2232,7 @@ export default function App() {
                               <div className="glass-card p-4 rounded-xl border border-white/10 space-y-3">
                                 <div className="flex items-center gap-2 text-left">
                                   <Gauge className="h-4 w-4 text-[#2ac1ff]" />
-                                  <span className="font-mono text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                                  <span className="font-mono text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                                     Actualiza los KMs de tu vehículo
                                   </span>
                                 </div>
@@ -2271,7 +2296,7 @@ export default function App() {
                       <h2 className="font-sans text-2xl font-black text-white tracking-tight uppercase leading-none">
                         {currentUser.displayName || currentUser.email?.split("@")[0] || "Operador Principal"}
                       </h2>
-                      <p className="text-[10px] text-on-surface-variant font-mono uppercase tracking-wider mt-1">
+                      <p className="text-xs text-on-surface-variant font-mono uppercase tracking-wider mt-1">
                         {currentUser.email}
                       </p>
                     </div>
@@ -2279,7 +2304,7 @@ export default function App() {
                     <button
                       onClick={() => signOut(auth)}
                       type="button"
-                      className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                      className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
                     >
                       <LogOut className="h-3.5 w-3.5 text-red-400" />
                       <span>Cerrar Sesión</span>
@@ -2307,7 +2332,7 @@ export default function App() {
                         </div>
                         <button
                           type="submit"
-                          className="py-2 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-bold font-mono text-[10px] rounded-lg transition-all cursor-pointer h-[32px] uppercase tracking-wider"
+                          className="py-2 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-bold font-mono text-xs rounded-lg transition-all cursor-pointer h-[32px] uppercase tracking-wider"
                         >
                           Calibrar
                         </button>
@@ -2327,7 +2352,7 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <div>
                           <label className="text-xs font-semibold text-white block">Notificaciones de Mantenimiento</label>
-                          <span className="text-[10px] text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos por correo y push.</span>
+                          <span className="text-xs text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos por correo y push.</span>
                         </div>
                         <button
                           type="button"
@@ -2378,7 +2403,7 @@ export default function App() {
                     <div className="space-y-3.5 border-t border-white/5 pt-4">
                       <div>
                         <span className="font-sans font-bold text-[11px] text-[#2ac1ff] uppercase tracking-wide block mb-1">Intervalos de Alerta de Kilometraje</span>
-                        <p className="text-[10px] text-on-surface-variant leading-normal">
+                        <p className="text-xs text-on-surface-variant leading-normal">
                           Configura cuántos kilómetros antes de la expiración se activará el aviso en sistema.
                         </p>
                       </div>
@@ -2399,7 +2424,7 @@ export default function App() {
                               }}
                               className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
                             />
-                            <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                            <span className="absolute right-3 top-2.5 text-xs text-[#2ac1ff] font-mono">km</span>
                           </div>
                         </div>
 
@@ -2418,7 +2443,7 @@ export default function App() {
                               }}
                               className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
                             />
-                            <span className="absolute right-3 top-2.5 text-[10px] text-[#2ac1ff] font-mono">km</span>
+                            <span className="absolute right-3 top-2.5 text-xs text-[#2ac1ff] font-mono">km</span>
                           </div>
                         </div>
                       </div>
@@ -2434,7 +2459,7 @@ export default function App() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="py-1.5 px-3 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          className="py-1.5 px-3 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                         >
                           Eliminar Cuenta
                         </button>
