@@ -10,16 +10,21 @@ dotenv.config();
 // Initialize Firebase Admin dynamically to avoid requiring credentials files on startup
 let messagingModule: any = null;
 try {
-  if (process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    admin.initializeApp();
+  if (admin.apps.length === 0) {
+    if (process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      admin.initializeApp();
+      messagingModule = admin.messaging();
+      console.log("[FIREBASE-ADMIN] Inicializado correctamente para notificaciones push.");
+    } else if (process.env.FIREBASE_PROJECT_ID) {
+      admin.initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+      });
+      messagingModule = admin.messaging();
+      console.log("[FIREBASE-ADMIN] Inicializado con projectId.");
+    }
+  } else {
     messagingModule = admin.messaging();
-    console.log("[FIREBASE-ADMIN] Inicializado correctamente para notificaciones push.");
-  } else if (process.env.FIREBASE_PROJECT_ID) {
-    admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-    });
-    messagingModule = admin.messaging();
-    console.log("[FIREBASE-ADMIN] Inicializado con projectId.");
+    console.log("[FIREBASE-ADMIN] Reutilizando app de Firebase existente.");
   }
 } catch (adminErr) {
   console.warn("FCM Server Admin SDK initialisation skipped/limited (simulation fallback enabled):", adminErr);
@@ -405,7 +410,7 @@ function getIndustryFallbackPlan(fuelType: string, vehicleType?: string) {
 
 // Vite and static serving setup
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
