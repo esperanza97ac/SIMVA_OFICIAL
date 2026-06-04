@@ -2293,10 +2293,10 @@ export default function App() {
                   {/* Profile Header */}
                   <div className="flex items-center justify-between border-b border-white/5 pb-4">
                     <div>
-                      <h2 className="font-sans text-2xl font-black text-white tracking-tight uppercase leading-none">
+                      <h2 className="font-sans text-3xl font-black text-white tracking-tight uppercase leading-none">
                         {currentUser.displayName || currentUser.email?.split("@")[0] || "Operador Principal"}
                       </h2>
-                      <p className="text-xs text-on-surface-variant font-mono uppercase tracking-wider mt-1">
+                      <p className="text-sm text-on-surface-variant font-mono uppercase tracking-wider mt-2">
                         {currentUser.email}
                       </p>
                     </div>
@@ -2304,55 +2304,28 @@ export default function App() {
                     <button
                       onClick={() => signOut(auth)}
                       type="button"
-                      className="py-1.5 px-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
+                      className="py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider flex items-center gap-1.5"
                     >
-                      <LogOut className="h-3.5 w-3.5 text-red-400" />
+                      <LogOut className="h-4 w-4 text-red-400" />
                       <span>Cerrar Sesión</span>
                     </button>
                   </div>
 
-                  {/* Manual Calibration */}
-                  {carProfile && (
-                    <section className="glass-card p-4 rounded-xl border border-white/5 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Gauge className="h-3.5 w-3.5 text-[#2ac1ff]" />
-                        <span className="font-mono text-[9px] font-bold text-on-surface-variant uppercase tracking-wider">
-                          Calibrar Odómetro
-                        </span>
-                      </div>
-                      <form onSubmit={handleUpdateOdometer} className="flex gap-2.5 items-end">
-                        <div className="flex-1">
-                          <input
-                            type="number"
-                            min={0}
-                            value={newOdo}
-                            onChange={(e) => setNewOdo(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-primary-fixed-dim"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          className="py-2 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-bold font-mono text-xs rounded-lg transition-all cursor-pointer h-[32px] uppercase tracking-wider"
-                        >
-                          Calibrar
-                        </button>
-                      </form>
-                    </section>
-                  )}
-
                   {/* AJUSTES Section */}
-                  <section className="glass-card p-5 rounded-2xl border border-white/10 space-y-5">
-                    <div className="flex items-center gap-2 border-b border-white/5 pb-2.5">
-                      <Sliders className="h-4.5 w-4.5 text-[#2ac1ff]" />
-                      <h4 className="font-sans font-bold text-sm text-[#2ac1ff] uppercase tracking-wider">AJUSTES</h4>
+                  <section className="glass-card p-6 rounded-2xl border border-white/10 space-y-6">
+                    <div className="flex items-center gap-2.5 border-b border-white/5 pb-3">
+                      <Sliders className="h-5 w-5 text-[#2ac1ff]" />
+                      <h4 className="font-sans font-bold text-base text-[#2ac1ff] uppercase tracking-wider">AJUSTES</h4>
                     </div>
 
                     {/* Notification Switch */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-4">
                         <div>
-                          <label className="text-xs font-semibold text-white block">Notificaciones de Mantenimiento</label>
-                          <span className="text-xs text-on-surface-variant font-medium">Alertas de desgaste predictivo y sensores preventivos por correo y push.</span>
+                          <label className="text-sm md:text-base font-bold text-white block">Notificaciones de Mantenimiento</label>
+                          <span className="text-xs md:text-sm text-on-surface-variant font-medium block mt-1">
+                            Alertas de desgaste predictivo y sensores preventivos por correo y push.
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -2364,25 +2337,25 @@ export default function App() {
                               await requestPushPermissionAndRegister();
                             }
                           }}
-                          className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer ${notiPush ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
+                          className={`w-12 h-6 md:w-14 md:h-7 rounded-full p-0.5 transition-colors cursor-pointer flex-shrink-0 ${notiPush ? 'bg-[#2ac1ff]' : 'bg-white/10'}`}
                         >
-                          <div className={`w-5 h-5 rounded-full bg-black transition-transform ${notiPush ? 'translate-x-5' : 'translate-x-0'}`} />
+                          <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full bg-black transition-transform ${notiPush ? 'translate-x-6' : 'translate-x-0'}`} />
                         </button>
                       </div>
 
                       {notiPush && (
-                        <div className="bg-black/50 border border-white/5 rounded-lg p-3 space-y-2">
+                        <div className="bg-black/50 border border-white/5 rounded-lg p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="font-mono text-[9px] text-[#2ac1ff] uppercase">Estado de Push Web:</span>
-                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${fcmToken ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                            <span className="font-mono text-xs text-[#2ac1ff] uppercase">Estado de Push Web:</span>
+                            <span className={`font-mono text-xs px-2 py-0.5 rounded font-bold uppercase ${fcmToken ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
                               {fcmToken ? 'Canal Conectado' : 'Pendiente Permiso'}
                             </span>
                           </div>
                           
                           {fcmToken ? (
-                            <div className="space-y-1">
-                              <span className="font-mono text-[8px] text-gray-400 uppercase block select-none">Token de Registro del Dispositivo:</span>
-                              <div className="font-mono text-[8px] bg-black/80 px-2 py-1.5 rounded text-[#2ac1ff] break-all border border-white/5 select-all">
+                            <div className="space-y-1.5">
+                              <span className="font-mono text-xs text-gray-400 uppercase block select-none">Token de Registro del Dispositivo:</span>
+                              <div className="font-mono text-xs bg-black/80 px-2.5 py-2 rounded text-[#2ac1ff] break-all border border-white/5 select-all">
                                 {fcmToken}
                               </div>
                             </div>
@@ -2390,7 +2363,7 @@ export default function App() {
                             <button
                               type="button"
                               onClick={requestPushPermissionAndRegister}
-                              className="w-full py-1.5 px-2.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-mono text-[9px] font-bold rounded transition-all uppercase tracking-wider"
+                              className="w-full py-2.5 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff]/20 border border-[#2ac1ff]/20 text-[#2ac1ff] font-mono text-xs font-bold rounded transition-all uppercase tracking-wider"
                             >
                               Conceder Permiso para Notificaciones Push
                             </button>
@@ -2400,17 +2373,17 @@ export default function App() {
                     </div>
 
                     {/* Calibration Thresholds */}
-                    <div className="space-y-3.5 border-t border-white/5 pt-4">
+                    <div className="space-y-4 border-t border-white/5 pt-5">
                       <div>
-                        <span className="font-sans font-bold text-[11px] text-[#2ac1ff] uppercase tracking-wide block mb-1">Intervalos de Alerta de Kilometraje</span>
-                        <p className="text-xs text-on-surface-variant leading-normal">
+                        <span className="font-sans font-bold text-sm md:text-base text-[#2ac1ff] uppercase tracking-wide block mb-1">Intervalos de Alerta de Kilometraje</span>
+                        <p className="text-xs md:text-sm text-on-surface-variant leading-normal">
                           Configura cuántos kilómetros antes de la expiración se activará el aviso en sistema.
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5 text-left">
-                          <label className="font-mono text-[9px] font-bold text-amber-400 block uppercase">Notificación Ámbar</label>
+                        <div className="space-y-2 text-left">
+                          <label className="font-mono text-xs font-bold text-amber-400 block uppercase">Notificación Ámbar</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -2422,14 +2395,14 @@ export default function App() {
                                 setWarnDistance(v);
                                 localStorage.setItem("simva_warn_distance", String(v));
                               }}
-                              className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                              className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-sm text-white font-mono focus:border-[#2ac1ff] pr-10"
                             />
-                            <span className="absolute right-3 top-2.5 text-xs text-[#2ac1ff] font-mono">km</span>
+                            <span className="absolute right-3 top-3 text-sm text-[#2ac1ff] font-mono">km</span>
                           </div>
                         </div>
 
-                        <div className="space-y-1.5 text-left">
-                          <label className="font-mono text-[9px] font-bold text-red-400 block uppercase">Aviso Rojo</label>
+                        <div className="space-y-2 text-left">
+                          <label className="font-mono text-xs font-bold text-red-400 block uppercase">Aviso Rojo</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -2441,9 +2414,9 @@ export default function App() {
                                 setDangerDistance(v);
                                 localStorage.setItem("simva_danger_distance", String(v));
                               }}
-                              className="w-full bg-black border border-white/10 rounded-lg p-2 text-xs text-white font-mono focus:border-[#2ac1ff] pr-10"
+                              className="w-full bg-black border border-white/10 rounded-lg p-2.5 text-sm text-white font-mono focus:border-[#2ac1ff] pr-10"
                             />
-                            <span className="absolute right-3 top-2.5 text-xs text-[#2ac1ff] font-mono">km</span>
+                            <span className="absolute right-3 top-3 text-sm text-[#2ac1ff] font-mono">km</span>
                           </div>
                         </div>
                       </div>
@@ -2451,15 +2424,15 @@ export default function App() {
                   </section>
 
                   {/* Minimal Danger Zone */}
-                  <section className="p-4 rounded-xl border border-red-500/10 bg-red-500/5 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <section className="p-5 rounded-2xl border border-red-500/10 bg-red-500/5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
-                        <h4 className="text-red-400 font-sans font-bold text-xs uppercase tracking-wider">Zona de Peligro</h4>
+                        <h4 className="text-red-400 font-sans font-bold text-sm md:text-base uppercase tracking-wider">Zona de Peligro</h4>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="py-1.5 px-3 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-xs font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
+                          className="py-2.5 px-4 bg-[#e11d48]/10 hover:bg-[#e11d48]/20 border border-[#e11d48]/20 text-[#fda4af] text-sm font-mono font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider"
                         >
                           Eliminar Cuenta
                         </button>

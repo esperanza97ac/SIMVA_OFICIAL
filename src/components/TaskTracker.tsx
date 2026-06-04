@@ -219,8 +219,14 @@ export default function TaskTracker({
   // Initiate custom completion logger dialog
   const openCompleteModal = (taskId: string) => {
     setActiveLogTaskId(taskId);
-    setLogKm(car.currentKm);
-    setLogDate(new Date().toISOString().split("T")[0]);
+    const existing = getTaskTracking(taskId);
+    if (existing) {
+      setLogKm(existing.lastCompletedKm !== undefined ? existing.lastCompletedKm : car.currentKm);
+      setLogDate(existing.lastCompletedDate || new Date().toISOString().split("T")[0]);
+    } else {
+      setLogKm(car.currentKm);
+      setLogDate(new Date().toISOString().split("T")[0]);
+    }
   };
 
   // Save manual completion details
@@ -433,6 +439,7 @@ export default function TaskTracker({
           const formattedIntervalMonths = Math.max(0, Math.round(Number(task.cada_meses)));
 
           const isCaducado = (task.cada_km > 0 && kmRemaining <= 0) || (task.cada_meses > 0 && formattedMonthsRemaining <= 0);
+          const lifePercentage = isCaducado ? 0 : Math.max(0, 100 - wearPercentage);
 
           return (
             <div
@@ -517,10 +524,10 @@ export default function TaskTracker({
                   </span>
                 </div>
 
-                {/* 📊 BARRA DE DESGASTE KILÓMETRO A KILÓMETRO con tonos Neón */}
+                {/* 📊 BARRA DE VIDA ÚTIL con tonos Neón */}
                 <div className="mt-4 flex flex-col gap-1.5">
                   <div className="flex justify-between items-center text-xs font-mono">
-                    <span className="text-primary-400 uppercase tracking-wider text-[9px] font-bold">Consumo de vida útil</span>
+                    <span className="text-primary-400 uppercase tracking-wider text-[9px] font-bold">Vida útil restante</span>
                     <span className={`font-black tracking-tight ${
                       isCaducado || statusColor === "danger"
                         ? "text-red-450 neon-glow-red font-black text-xs uppercase"
@@ -528,7 +535,7 @@ export default function TaskTracker({
                         ? "text-amber-450 neon-glow-amber"
                         : "text-emerald-450 neon-glow-green"
                     }`}>
-                      {isCaducado ? "EXCEDIDO 100%" : `${wearPercentage}%`}
+                      {isCaducado ? "0% (CADUCADO)" : `${lifePercentage}%`}
                     </span>
                   </div>
 
@@ -544,7 +551,7 @@ export default function TaskTracker({
                           ? "bg-gradient-to-r from-amber-650 to-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.7)]"
                           : "bg-gradient-to-r from-emerald-650 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.7)]"
                       }`}
-                      style={{ width: `${isCaducado ? 100 : wearPercentage}%` }}
+                      style={{ width: `${lifePercentage}%` }}
                     />
                   </div>
                   
@@ -579,7 +586,7 @@ export default function TaskTracker({
                   </div>
 
                   <div className="flex flex-col border-l border-primary-800/80 pl-3 md:pl-3.5 text-left">
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-primary-400">Restan Meses (Redondo)</span>
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-primary-400">Restan Meses</span>
                     {task.cada_meses > 0 ? (
                       <span className={`font-mono text-xs md:text-sm font-bold mt-0.5 ${
                         formattedMonthsRemaining <= 1 ? "text-red-450 font-black" : formattedMonthsRemaining <= 2 ? "text-amber-400" : "text-white"
@@ -622,7 +629,7 @@ export default function TaskTracker({
                   onClick={() => handleQuickComplete(task.id)}
                   className="flex-1 rounded-lg bg-primary-900/80 hover:bg-primary-800 text-white font-sans text-xs font-extrabold py-2 border border-primary-800 hover:border-accent-gold transition-all active:scale-95 text-center cursor-pointer uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis"
                 >
-                  Cambio Hecho ({car.currentKm.toLocaleString("es-ES")} km)
+                  ¡Cambio Hecho!
                 </button>
 
                 <button
@@ -639,7 +646,7 @@ export default function TaskTracker({
                   id={`delete-task-${task.id}`}
                   type="button"
                   onClick={() => handleDeleteTask(task.id)}
-                  className="rounded-lg bg-primary-950 hover:bg-red-950/20 p-2 border border-primary-850 hover:border-red-900/40 text-primary-500 hover:text-red-400 transition-colors cursor-pointer"
+                  className="rounded-lg bg-primary-950 hover:bg-red-955/20 p-2 border border-primary-850 hover:border-red-900/40 text-primary-500 hover:text-red-400 transition-colors cursor-pointer"
                   title="Eliminar pieza del plan"
                 >
                   <Trash2 className="h-4 w-4" />
