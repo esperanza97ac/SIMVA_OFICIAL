@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import admin from "firebase-admin";
 
 // Load environment variables
@@ -261,24 +261,24 @@ Tu respuesta debe ser un objeto JSON con el siguiente esquema: "plan" (el arregl
             config: {
               responseMimeType: "application/json",
               responseSchema: {
-                type: Type.OBJECT,
+                type: "OBJECT",
                 properties: {
                   plan: {
-                    type: Type.ARRAY,
+                    type: "ARRAY",
                     description: "Arreglo de tareas de mantenimiento ordenadas de menor a mayor kilometraje.",
                     items: {
-                      type: Type.OBJECT,
+                      type: "OBJECT",
                       properties: {
                         tarea: {
-                          type: Type.STRING,
+                          type: "STRING",
                           description: "Nombre de la tarea de mantenimiento en español.",
                         },
                         cada_km: {
-                          type: Type.INTEGER,
+                          type: "INTEGER",
                           description: "Periodicidad en kilómetros. 0 si no aplica kilometraje.",
                         },
                         cada_meses: {
-                          type: Type.INTEGER,
+                          type: "INTEGER",
                           description: "Periodicidad en meses. 0 si no aplica tiempo.",
                         },
                       },
