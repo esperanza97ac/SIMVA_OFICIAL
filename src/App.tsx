@@ -2128,7 +2128,7 @@ export default function App() {
 
                             <div className="glass-card p-6 rounded-2xl border border-white/10 text-center">
                               <p className="text-xs text-on-surface-variant font-mono">
-                                👇 Selecciona un vehículo de arriba (o en la pestaña Garaje) para ver su plan de trabajo detallado.
+                                Selecciona un vehículo de arriba (o en la pestaña Garaje) para ver su plan de trabajo detallado.
                               </p>
                             </div>
                           </>
