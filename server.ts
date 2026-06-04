@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
 
 // Load environment variables
@@ -407,6 +406,7 @@ function getIndustryFallbackPlan(fuelType: string, vehicleType?: string) {
 // Vite and static serving setup
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
