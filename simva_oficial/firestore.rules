@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive definitions
+    // Clean, robust global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Schema Validation Helpers
+    // Users Profile Schema Check
+    function isValidUserProfile(data) {
+      return data.userId == request.auth.uid &&
+             data.email is string &&
+             data.email.size() <= 256;
+    }
+
+    // Car Profile Technical Specifications Schema Check
+    function isValidCarProfile(data) {
+      return data.makeModel is string && data.makeModel.size() <= 128 &&
+             data.fuelType is string && data.fuelType.size() <= 64 &&
+             data.year is int && data.year >= 1900 && data.year <= 2100 &&
+             data.currentKm is int && data.currentKm >= 0 && data.currentKm <= 10000000 &&
+             data.monthlyKm is int && data.monthlyKm >= 0 && data.monthlyKm <= 100000;
+    }
+
+    // Maintenance Task Schema Check
+    function isValidTask(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.tarea is string && data.tarea.size() <= 256 &&
+             data.cada_km is int && data.cada_km >= 0 && data.cada_km <= 5000000 &&
+             data.cada_meses is int && data.cada_meses >= 0 && data.cada_meses <= 1200;
+    }
+
+    // Task Tracking Log Schema Check
+    function isValidTracking(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             (data.lastCompletedKm == null || (data.lastCompletedKm is int && data.lastCompletedKm >= 0)) &&
+             (data.lastCompletedDate == null || (data.lastCompletedDate is string && data.lastCompletedDate.size() <= 32));
+    }
+
+    // Main Rules match
+    match /users/{userId} {
+      // User collection rules
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email']);
+      allow delete: if false;
+
+      // Car configuration subcollection
+      match /car/profile {
+        allow get: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidCarProfile(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      // Tasks subcollection
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidTask(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      // Tracking logs subcollection
+      match /tracking/{trackingId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidTracking(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
