@@ -89,6 +89,35 @@ export default function TaskTracker({
     return <Wrench className="h-5 w-5 text-primary-300" />;
   };
 
+  // Timezone-safe local formatting for Spanish dates
+  const formatSpainDateString = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length >= 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const months = ["ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic."];
+      const monthLabel = months[monthIndex] || parts[1];
+      return `${day} de ${monthLabel} de ${year}`;
+    }
+    return dateStr;
+  };
+
+  // Format to Month and Year in Spanish for the last completed card description (e.g. "junio de 2026")
+  const formatSpainMonthYearString = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length >= 3) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+      const monthLabel = months[monthIndex] || parts[1];
+      return `${monthLabel} de ${year}`;
+    }
+    return dateStr;
+  };
+
   // Compute prediction alerts and the exact wear percentage elapsed
   const computeAlertAndWear = (task: MaintenanceTask) => {
     const track = getTaskTracking(task.id);
@@ -458,8 +487,8 @@ export default function TaskTracker({
               <div>
                 
                 {/* Header: Title + Icon + traffic light semaphore */}
-                <div className="flex items-start justify-between gap-2.5">
-                  <div className="flex items-start gap-3">
+                <div className="flex items-start justify-between gap-2.5 w-full">
+                  <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                     {/* Clean contextual icon inside vibrant circle */}
                     <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${
                       isCaducado || statusColor === "danger"
@@ -471,8 +500,8 @@ export default function TaskTracker({
                       {getTaskIcon(task.tarea)}
                     </div>
                     
-                    <div className="text-left">
-                      <h4 className="font-display text-sm md:text-base font-extrabold text-white leading-tight flex flex-col gap-1 items-start">
+                    <div className="text-left min-w-0 flex-1">
+                      <h4 className="font-display text-sm md:text-base font-extrabold text-white leading-tight flex flex-col gap-1 items-start break-words">
                         <span>{task.tarea}</span>
                         {isCaducado && (
                           <span className="inline-block mt-1 font-mono text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-black uppercase tracking-wider animate-pulse">
@@ -480,7 +509,7 @@ export default function TaskTracker({
                           </span>
                         )}
                       </h4>
-                      <p className="font-mono text-[9px] text-primary-450 mt-1 uppercase tracking-widest">
+                      <p className="font-mono text-[9px] text-primary-450 mt-1 uppercase tracking-widest truncate">
                         {task.isCustom ? "Ajuste Personalizado" : "Recomendado Fabricante"}
                       </p>
                     </div>
@@ -512,12 +541,12 @@ export default function TaskTracker({
                 </div>
 
                 {/* Required Cycle Metric Intervals */}
-                <div className="mt-4 flex items-center justify-between border-b border-primary-800/60 pb-2.5 font-mono text-[11px] md:text-xs text-primary-400">
-                  <span className="flex items-center gap-1.5">
-                    <Timer className="h-3.5 w-3.5 text-accent-gold" />
-                    <span>Intervalo de cambio:</span>
+                <div className="mt-4 flex flex-wrap items-center justify-between border-b border-primary-800/60 pb-2.5 font-mono text-[10px] sm:text-xs text-primary-400 gap-2">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <Timer className="h-3.5 w-3.5 text-accent-gold shrink-0" />
+                    <span className="truncate">Intervalo de cambio:</span>
                   </span>
-                  <span className="font-extrabold text-white">
+                  <span className="font-extrabold text-white shrink-0">
                     {task.cada_km > 0 ? `${task.cada_km.toLocaleString("es-ES")} KM` : ""}
                     {task.cada_km > 0 && task.cada_meses > 0 ? " o " : ""}
                     {task.cada_meses > 0 ? `${formattedIntervalMonths} meses` : ""}
@@ -556,13 +585,13 @@ export default function TaskTracker({
                   </div>
                   
                   {/* Status subtitle helper */}
-                  <div className="text-xs text-left">
-                    {statusColor === "danger" ? (
-                      <span className="text-red-400 font-semibold">• Semáforo Rojo (<strong className="font-black">&lt; 500 km</strong>). Requiere sustitución inmediata.</span>
+                  <div className="text-xs text-left font-semibold uppercase tracking-wide font-mono text-[10px] md:text-[11px]">
+                    {isCaducado || statusColor === "danger" ? (
+                      <span className="text-red-450">• Intervención inmediata</span>
                     ) : statusColor === "warning" ? (
-                      <span className="text-amber-400 font-semibold">• Semáforo Ámbar (<strong className="font-semibold">500 - 1.000 km</strong>). Inspeccionar pronto.</span>
+                      <span className="text-amber-400">• Consúltalo con tu mecánico</span>
                     ) : (
-                      <span className="text-emerald-400 font-semibold">• Semáforo Verde (<strong className="font-semibold">&gt; 1.000 km</strong>). Kilometraje de viaje seguro.</span>
+                      <span className="text-emerald-450">• Viaje seguro</span>
                     )}
                   </div>
                 </div>
@@ -607,12 +636,12 @@ export default function TaskTracker({
                   <History className="h-3.5 w-3.5 text-accent-gold shrink-0" />
                   {track && (track.lastCompletedKm !== undefined || track.lastCompletedDate) ? (
                     <span className="leading-tight">
-                      Último cambio realizado el{" "}
+                      Último cambio realizado{" "}
                       {track.lastCompletedDate 
-                        ? new Date(track.lastCompletedDate).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
+                        ? formatSpainMonthYearString(track.lastCompletedDate)
                         : ""
                       }{" "}
-                      a los {track.lastCompletedKm?.toLocaleString("es-ES") || 0} KM
+                      a los {track.lastCompletedKm?.toLocaleString("es-ES") || 0} kms
                     </span>
                   ) : (
                     <span className="italic text-primary-500 leading-tight">Sin historial previo. Se asume calibrado del vehículo inicial.</span>

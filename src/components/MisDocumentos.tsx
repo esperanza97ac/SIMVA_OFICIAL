@@ -160,14 +160,57 @@ export default function MisDocumentos() {
     setTimeout(() => setSuccessMsg(null), 4000);
   };
 
-  // Format Helper: removes the expiry day only for 'permiso de circulación' ID
+  // Format Helper: removes the expiry day and formats as MM/YYYY for 'permiso' (DGT Spain standard)
   const formatExpiryWithoutDay = (dateStr: string) => {
     if (!dateStr) return "";
     const parts = dateStr.split("-");
     if (parts.length >= 2) {
-      return `${parts[0]}-${parts[1]}`; // Return only Year and Month (e.g. YYYY-MM)
+      return `${parts[1]}/${parts[0]}`; // MM/YYYY format
     }
     return dateStr;
+  };
+
+  // Format Helper: formats as DD/MM/YYYY for ITV, Seguro, and Carné (Standard Spanish format)
+  const formatExpiryWithDay = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length >= 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY format
+    }
+    return formatExpiryWithoutDay(dateStr);
+  };
+
+  // Calculates a highly realistic standard Spanish legal expiration date instead of look-alike random strings
+  const getLogicalExpiryDate = (docId: string): string => {
+    const today = new Date();
+    if (docId === "itv") {
+      // ITV lasts exactly 1 year of today for vehicle simulations
+      const returnDate = new Date(today);
+      returnDate.setFullYear(today.getFullYear() + 1);
+      return returnDate.toISOString().split("T")[0];
+    }
+    if (docId === "seguro") {
+      // Auto Insurance lasts exactly 1 year from configuration
+      const returnDate = new Date(today);
+      returnDate.setFullYear(today.getFullYear() + 1);
+      return returnDate.toISOString().split("T")[0];
+    }
+    if (docId === "conducir") {
+      // Driver licence spans 5 years for stable simulations
+      const returnDate = new Date(today);
+      returnDate.setFullYear(today.getFullYear() + 5);
+      return returnDate.toISOString().split("T")[0];
+    }
+    if (docId === "multas") {
+      // Outstanding fines expire or must be paid in 1 month (30 days)
+      const returnDate = new Date(today);
+      returnDate.setMonth(today.getMonth() + 1);
+      return returnDate.toISOString().split("T")[0];
+    }
+    // Fallback standard 1 year
+    const returnDate = new Date(today);
+    returnDate.setFullYear(today.getFullYear() + 1);
+    return returnDate.toISOString().split("T")[0];
   };
 
   const handleToggleReminder = (id: string, enabled: boolean) => {
@@ -198,7 +241,7 @@ export default function MisDocumentos() {
     try {
       const displayExpiry = docName.toLowerCase().includes("permiso") 
         ? formatExpiryWithoutDay(expiryDate) 
-        : expiryDate;
+        : formatExpiryWithDay(expiryDate);
 
       const response = await fetch("/api/send-push-notification", {
         method: "POST",
@@ -328,8 +371,7 @@ export default function MisDocumentos() {
     }, 450);
 
     setTimeout(() => {
-      const daysAhead = Math.floor(Math.random() * 800) + 60;
-      const simulatedExpiryDate = new Date(Date.now() + daysAhead * 24 * 3600 * 1000).toISOString().split("T")[0];
+      const simulatedExpiryDate = getLogicalExpiryDate(selectedDocIdForCamera);
       
       setOcrLog(prev => [
         ...prev,
@@ -364,8 +406,7 @@ export default function MisDocumentos() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64data = reader.result as string;
-        const randomDays = Math.floor(Math.random() * 400) + 50; 
-        const simulatedExpiryDate = new Date(Date.now() + randomDays * 24 * 3600 * 1000).toISOString().split("T")[0];
+        const simulatedExpiryDate = getLogicalExpiryDate(docId);
 
         const updated = documents.map(d => {
           if (d.id === docId) {
@@ -516,18 +557,18 @@ export default function MisDocumentos() {
                     )}
                   </div>
 
-                  <div className="space-y-1.5 py-0.5">
-                    <h4 className="font-sans font-bold text-sm text-white uppercase tracking-tight">
+                  <div className="space-y-1 py-0.5 min-w-0 flex-1">
+                    <h4 className="font-sans font-bold text-xs sm:text-sm text-white uppercase tracking-tight truncate sm:whitespace-normal" title={doc.name}>
                       {doc.name}
                     </h4>
 
                     {/* Expiration date layout with edit state */}
                     {doc.id !== "permiso" ? (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-sm text-on-surface-variant font-mono">
-                          <Calendar className="h-3.5 w-3.5 text-[#2ac1ff]" />
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-on-surface-variant font-mono text-left">
+                          <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#2ac1ff] shrink-0" />
                           {isEditing ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                               <input
                                 type="date"
                                 value={tempDate}
@@ -537,17 +578,17 @@ export default function MisDocumentos() {
                               <button
                                 type="button"
                                 onClick={() => handleSaveDate(doc.id)}
-                                className="bg-[#2ac1ff] text-black px-2 py-0.5 rounded font-sans text-xs font-bold uppercase transition-all cursor-pointer"
+                                className="bg-[#2ac1ff] text-black px-2 py-0.5 rounded font-sans text-[10px] sm:text-xs font-bold uppercase transition-all cursor-pointer"
                               >
                                 Ok
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               {displayExpiry ? (
                                 <span 
                                   onClick={() => handleStartEdit(doc)}
-                                  className="text-sm text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
+                                  className="text-xs sm:text-sm text-white hover:text-[#2ac1ff] cursor-pointer underline decoration-dotted transition-colors"
                                   title="Haga clic para editar vencimiento"
                                 >
                                   Expira: {displayExpiry}
@@ -555,10 +596,10 @@ export default function MisDocumentos() {
                               ) : (
                                 <span 
                                   onClick={() => handleStartEdit(doc)}
-                                  className="text-sm text-white hover:text-[#2ac1ff] cursor-pointer underline transition-colors"
+                                  className="text-xs sm:text-sm text-white/70 hover:text-[#2ac1ff] cursor-pointer underline transition-colors"
                                   title="Haga clic para configurar vencimiento manual"
                                 >
-                                  Expira: (Sube documento o ingresa la fecha)
+                                  Expira: (Subir o editar)
                                 </span>
                               )}
                             </div>
@@ -566,26 +607,26 @@ export default function MisDocumentos() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-xs text-emerald-400 font-mono bg-emerald-500/5 border border-emerald-500/10 px-2.5 py-0.5 rounded-lg w-fit">
+                      <div className="text-[10px] text-emerald-400 font-mono bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded-md w-fit">
                         No caduca / Permanente
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Status and Action controls */}
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                {/* Status and Action controls - Fully responsive flex wrap layout */}
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end shrink-0 mt-1 sm:mt-0 pt-2.5 sm:pt-0 border-t border-white/5 sm:border-0">
                   <button
                     type="button"
                     onClick={() => startCamera(doc.id)}
-                    className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer"
+                    className="py-1.5 px-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer"
                   >
-                    <Camera className="h-3.5 w-3.5 text-[#2ac1ff]" />
+                    <Camera className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#2ac1ff]" />
                     <span>CámaraX</span>
                   </button>
 
-                  <label className="py-1.5 px-3 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer">
-                    <Upload className="h-3.5 w-3.5 text-on-surface-variant" />
+                  <label className="py-1.5 px-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-wide flex items-center gap-1 cursor-pointer">
+                    <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-on-surface-variant" />
                     <span>Subir</span>
                     <input
                       type="file"
@@ -596,7 +637,7 @@ export default function MisDocumentos() {
                   </label>
 
                   {doc.id !== "permiso" && (
-                    <div className={`px-2.5 py-1.5 rounded-xl border ${status.color} flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider shrink-0`}>
+                    <div className={`px-2.5 py-1.5 rounded-lg border ${status.color} flex items-center gap-1 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider shrink-0`}>
                       {status.icon}
                       <span>{status.label}</span>
                     </div>

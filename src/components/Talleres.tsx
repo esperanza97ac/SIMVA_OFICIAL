@@ -640,17 +640,17 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
                   key={shop.id || idx}
                   className="group relative flex flex-col justify-between p-4 bg-[#11141a]/40 hover:bg-[#1e232d]/45 border border-white/5 hover:border-[#2ac1ff]/20 rounded-xl transition-all text-left"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 w-full">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div className="p-2 bg-[#2ac1ff]/10 border border-[#2ac1ff]/20 text-[#2ac1ff] rounded-lg mt-0.5 shrink-0">
                         <Wrench className="h-4 w-4" />
                       </div>
-                      <div className="space-y-1">
-                        <h4 className="font-sans font-extrabold text-sm text-white uppercase tracking-tight group-hover:text-[#2ac1ff] transition-colors">
+                      <div className="space-y-1 min-w-0 flex-1 text-left">
+                        <h4 className="font-sans font-extrabold text-sm text-white uppercase tracking-tight group-hover:text-[#2ac1ff] transition-colors break-words">
                           {shop.tags?.name || "Taller de Reparación Automotriz"}
                         </h4>
                         
-                        <p className="text-[11px] text-gray-300">
+                        <p className="text-[11px] text-gray-300 break-words">
                           {fullAddress || "Dirección no especificada detalladamente en OSM."}
                         </p>
 
@@ -673,9 +673,9 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
                       </div>
                     </div>
 
-                    {/* Georeference badge and action */}
-                    <div className="flex flex-col items-end shrink-0 gap-2">
-                      <span className="font-mono text-[10px] text-[#54ffb5] bg-[#54ffb5]/10 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    {/* Georeference badge and action - Column on desktop, footer row on mobile */}
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto shrink-0 gap-2 mt-2 sm:mt-0 pt-2.5 sm:pt-0 border-t border-white/5 sm:border-0">
+                      <span className="font-mono text-[10px] text-[#54ffb5] bg-[#54ffb5]/10 px-2 py-0.5 rounded font-bold uppercase tracking-wider font-semibold">
                         A {distanceMeters < 1000 
                           ? `${Math.round(distanceMeters)}m` 
                           : `${(distanceMeters / 1000).toFixed(2)} km`}
@@ -685,7 +685,7 @@ export default function Talleres({ currentUserEmail }: TalleresProps) {
                         href={mapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-1 px-2.5 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff] border border-[#2ac1ff]/20 group-hover:border-[#2ac1ff]/40 text-[#2ac1ff] hover:text-black text-[9px] font-mono font-bold rounded transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                        className="py-1.5 px-3 bg-[#2ac1ff]/10 hover:bg-[#2ac1ff] border border-[#2ac1ff]/20 group-hover:border-[#2ac1ff]/40 text-[#2ac1ff] hover:text-black text-[9px] font-mono font-bold rounded transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer whitespace-nowrap"
                       >
                         <span>CÓMO LLEGAR</span>
                         <ExternalLink className="h-2.5 w-2.5" />

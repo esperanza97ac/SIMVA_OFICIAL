@@ -265,7 +265,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
               <input
                 type="text"
                 required
-                placeholder={brand ? `Busca o ingresa un modelo de ${brand}...` : "Primero selecciona una marca"}
+                placeholder={brand ? "Busca o escribe modelo..." : "Primero selecciona una marca"}
                 value={modelSearch}
                 disabled={!brand.trim()}
                 onFocus={() => setIsModelOpen(true)}
@@ -488,7 +488,7 @@ export default function CarProfileForm({ onSave, isLoading, currentProfile }: Ca
             {/* Mileage level elapsed */}
             <div className="flex flex-col gap-1.5">
               <label className="font-mono text-xs font-bold text-on-surface-variant uppercase tracking-wide">
-                KM DEL MANTENIMIENTO
+                kms en ese mantenimiento
               </label>
               <input
                 type="number"
